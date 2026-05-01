@@ -1,7 +1,7 @@
-/** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  allowedDevOrigins: ['192.168.1.67', 'localhost'],
-}
+  turbopack: {
+    root: __dirname, // This tells Turbopack to use my-app as the root
+  },
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

@@ -14,13 +14,15 @@ import {
   LogOut,
   ChevronRight,
   Bell,
-  User,
   TrendingUp,
   Clock,
   CheckCircle,
   Menu,
   X,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -31,6 +33,17 @@ export default function ClientDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [filterCounts, setFilterCounts] = useState({
+    all: 0,
+    inFieldwork: 0,
+    underReview: 0,
+    pending: 0,
+    published: 0
+  });
   const [counts, setCounts] = useState({
     total: 0,
     pending: 0,
@@ -62,8 +75,7 @@ export default function ClientDashboard() {
     setError(null);
     
     try {
-      // ✅ Using your correct backend route: GET /myProperties
-      console.log('🔍 Fetching properties from: /myProperties');
+      console.log('🔍 Fetching properties from: /client/myProperties');
       const response = await api.get('/client/myProperties', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -73,7 +85,6 @@ export default function ClientDashboard() {
       if (response.data.success) {
         let propertiesData = [];
         
-        // Extract properties based on response structure
         if (response.data.data?.properties) {
           propertiesData = response.data.data.properties;
           setCounts(response.data.data.counts || {
@@ -90,7 +101,6 @@ export default function ClientDashboard() {
           });
         } else if (Array.isArray(response.data.data)) {
           propertiesData = response.data.data;
-          // Calculate counts from properties
           setCounts({
             total: propertiesData.length,
             pending: propertiesData.filter((p: any) => p.status === 'PENDING').length,
@@ -108,15 +118,52 @@ export default function ClientDashboard() {
         }
         
         setProperties(propertiesData);
-        console.log(`✅ Loaded ${propertiesData.length} properties`);
+        
+        // Calculate filter counts
+        setFilterCounts({
+          all: propertiesData.length,
+          inFieldwork: propertiesData.filter((p: any) => p.status === 'IN_FIELDWORK').length,
+          underReview: propertiesData.filter((p: any) => p.status === 'UNDER_REVIEW').length,
+          pending: propertiesData.filter((p: any) => p.status === 'PENDING').length,
+          published: propertiesData.filter((p: any) => p.status === 'PUBLISHED').length
+        });
       } else {
         setError(response.data.error || 'Failed to load properties');
       }
     } catch (err: any) {
-      console.error('❌ Error fetching properties:', err);
       setError(err.response?.data?.error || err.message || 'Network error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (property: any) => {
+    setPropertyToDelete(property);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!propertyToDelete) return;
+    
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.delete(`/client/myProperties/${propertyToDelete.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        setProperties(properties.filter((p: any) => p.id !== propertyToDelete.id));
+        setDeleteModalOpen(false);
+        setPropertyToDelete(null);
+        fetchClientData(localStorage.getItem('token')!);
+      } else {
+        setError(response.data.error || 'Failed to delete property');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error deleting property');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -130,7 +177,7 @@ export default function ClientDashboard() {
     const badges: Record<string, string> = {
       'PENDING': 'bg-yellow-100 text-yellow-800',
       'ASSIGNED': 'bg-blue-100 text-blue-800',
-      'IN_FIELDWORK': 'bg-purple-100 text-purple-800',
+      'IN_FIELDWORK': 'bg-blue-100 text-blue-800',
       'UNDER_REVIEW': 'bg-orange-100 text-orange-800',
       'NEEDS_REVISION': 'bg-red-100 text-red-800',
       'APPROVED': 'bg-teal-100 text-teal-800',
@@ -141,10 +188,30 @@ export default function ClientDashboard() {
     return badges[status] || 'bg-gray-100 text-gray-800';
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  // Filter properties based on active filter
+  const getFilteredProperties = () => {
+    if (activeFilter === 'all') return properties;
+    if (activeFilter === 'inFieldwork') return properties.filter((p: any) => p.status === 'IN_FIELDWORK');
+    if (activeFilter === 'underReview') return properties.filter((p: any) => p.status === 'UNDER_REVIEW');
+    if (activeFilter === 'pending') return properties.filter((p: any) => p.status === 'PENDING');
+    if (activeFilter === 'published') return properties.filter((p: any) => p.status === 'PUBLISHED');
+    return properties;
+  };
+
+  const filteredProperties = getFilteredProperties();
+
   const menuItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, href: '/createProperty', current: true },
-    { name: 'My Properties', icon: Building2, href: '/clientDashboard/myProperties', current: false },
-    { name: 'Add Property', icon: PlusCircle, href: '/client/properties/create', current: false },
+    { name: 'Dashboard', icon: LayoutDashboard, href: '/client/dashboard', current: true },
     { name: 'Settings', icon: Settings, href: '/clientDashboard/settings', current: false },
     { name: 'Help & Support', icon: HelpCircle, href: '/clientDashboard/support', current: false },
   ];
@@ -183,7 +250,6 @@ export default function ClientDashboard() {
         fixed top-0 left-0 z-40 w-72 h-screen bg-white shadow-xl transition-transform duration-300
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-6 border-b border-gray-100">
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
             <Home className="w-5 h-5 text-white" />
@@ -194,7 +260,6 @@ export default function ClientDashboard() {
           </div>
         </div>
 
-        {/* Navigation Menu */}
         <nav className="flex-1 px-4 py-6 space-y-1">
           {menuItems.map((item) => (
             <Link
@@ -217,7 +282,6 @@ export default function ClientDashboard() {
           ))}
         </nav>
 
-        {/* Logout Button */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
           <button
             onClick={handleLogout}
@@ -231,15 +295,13 @@ export default function ClientDashboard() {
 
       {/* Main Content */}
       <main className="lg:ml-72 min-h-screen">
-        {/* Top Header */}
         <header className="bg-white shadow-sm sticky top-0 z-30">
           <div className="flex justify-between items-center px-6 py-4">
             <h2 className="text-xl font-semibold text-gray-800 hidden lg:block">
-              My Properties
+              Dashboard
             </h2>
             
             <div className="flex items-center gap-4 ml-auto">
-              {/* Refresh Button */}
               <button
                 onClick={() => fetchClientData(localStorage.getItem('token')!)}
                 className="p-2 text-gray-400 hover:text-indigo-600 transition-colors"
@@ -271,9 +333,7 @@ export default function ClientDashboard() {
           </div>
         </header>
 
-        {/* Dashboard Content */}
         <div className="p-6">
-          {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
               <p className="text-red-700 text-sm">{error}</p>
@@ -315,7 +375,7 @@ export default function ClientDashboard() {
                 </div>
                 <span className="text-2xl font-bold text-blue-600">{counts.assigned + counts.inFieldwork}</span>
               </div>
-              <p className="text-sm text-gray-600">In Progress</p>
+              <p className="text-sm text-gray-600">In Fieldwork</p>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:shadow-md transition-shadow">
@@ -339,66 +399,229 @@ export default function ClientDashboard() {
             </div>
           </div>
 
-          {/* Properties List */}
+          {/* Properties List with Filter Tabs */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">All Properties</h3>
+            {/* Header with Add Button and Filter Tabs */}
+            <div className="px-6 pt-4 pb-2 border-b border-gray-100">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">All Properties</h3>
+                <Link
+                  href="/client/createProperty"
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span className="font-medium">Add New Property</span>
+                </Link>
+              </div>
+              
+              {/* Filter Tabs */}
+              <div className="flex gap-1 overflow-x-auto pb-2">
+                <button
+                  onClick={() => setActiveFilter('all')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                    activeFilter === 'all'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  All ({filterCounts.all})
+                </button>
+                <button
+                  onClick={() => setActiveFilter('inFieldwork')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                    activeFilter === 'inFieldwork'
+                      ? 'bg-teal-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  In Fieldwork ({filterCounts.inFieldwork})
+                </button>
+                <button
+                  onClick={() => setActiveFilter('underReview')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                    activeFilter === 'underReview'
+                      ? 'bg-orange-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Under Review ({filterCounts.underReview})
+                </button>
+                <button
+                  onClick={() => setActiveFilter('pending')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                    activeFilter === 'pending'
+                      ? 'bg-yellow-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Pending ({filterCounts.pending})
+                </button>
+                <button
+                  onClick={() => setActiveFilter('published')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                    activeFilter === 'published'
+                      ? 'bg-green-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Published ({filterCounts.published})
+                </button>
+              </div>
             </div>
 
-            {properties.length === 0 ? (
+            {filteredProperties.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <FileText className="w-10 h-10 text-gray-400" />
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-2">No properties yet</h4>
-                <p className="text-gray-500 mb-4">Get started by adding your first property</p>
-                <Link
-                  href="/client/properties/create"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  Add New Property
-                </Link>
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">No properties found</h4>
+                <p className="text-gray-500 mb-4">
+                  {activeFilter === 'all' 
+                    ? 'Get started by adding your first property'
+                    : `No properties with status "${activeFilter.replace(/([A-Z])/g, ' $1').trim()}"`}
+                </p>
+                {activeFilter === 'all' && (
+                  <Link
+                    href="/client/createProperty"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Add New Property
+                  </Link>
+                )}
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
-                {properties.map((property: any) => (
-                  <div key={property.id} className="p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex justify-between items-start flex-wrap gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="text-base font-semibold text-gray-900">
-                            {property.title || `Property ${property.upiNumber}`}
-                          </h4>
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getStatusBadge(property.status)}`}>
-                            {property.status}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">UPI / OWNER</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">LOCATION</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">STATUS</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">CREATED</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">VALUATION</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredProperties.map((property: any) => (
+                      <tr key={property.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{property.upiNumber}</p>
+                            <p className="text-xs text-gray-500">{property.ownerName || property.owner?.name || '—'}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-700">{property.district || '—'}</p>
+                          <p className="text-xs text-gray-500">{property.province || 'Kigali City'}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(property.status)}`}>
+                            {property.status?.replace(/_/g, ' ') || 'PENDING'}
                           </span>
-                        </div>
-                        <p className="text-gray-500 text-sm mb-1">UPI: {property.upiNumber}</p>
-                        <p className="text-gray-500 text-sm">
-                          {property.district}, {property.province}
-                        </p>
-                        {property.aiValuation && (
-                          <p className="text-indigo-600 font-semibold text-sm mt-2">
-                            Valuation: {property.aiValuation.toLocaleString()} RWF
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-700">
+                            {formatDate(property.createdAt)}
                           </p>
-                        )}
-                      </div>
-                      <Link
-                        href={`/client/properties/${property.id}`}
-                        className="text-indigo-600 hover:text-indigo-700 text-sm font-medium flex items-center gap-1"
-                      >
-                        View Details
-                        <ChevronRight className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                        <td className="px-6 py-4">
+                          {property.aiValuation ? (
+                            <p className="text-sm font-semibold text-indigo-600">
+                              {property.aiValuation.toLocaleString()} RWF
+                            </p>
+                          ) : (
+                            <span className="text-sm text-gray-400">Pending</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/client/myProperties/${property.id}`}
+                              className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Link>
+                            
+                            <Link
+                              href={`/client/editProperty/${property.id}`}
+                              className="p-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
+                              title="Edit Property"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Link>
+                            
+                            <button
+                              onClick={() => handleDeleteClick(property)}
+                              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                              title="Delete Property"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete Property</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-2">
+              Are you sure you want to delete this property?
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              UPI: <span className="font-medium">{propertyToDelete?.upiNumber}</span>
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setPropertyToDelete(null);
+                }}
+                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

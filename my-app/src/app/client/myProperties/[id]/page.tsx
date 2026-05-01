@@ -1,0 +1,702 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  ArrowLeft,
+  MapPin,
+  Calendar,
+  DollarSign,
+  FileText,
+  User,
+  MapPinned,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  TrendingUp,
+  Edit,
+  Trash2,
+  Save,
+  X,
+  AlertTriangle
+} from 'lucide-react';
+import api from '@/lib/api';
+
+// Rwanda location data
+const PROVINCES = [
+  'Kigali City',
+  'Northern Province',
+  'Eastern Province',
+  'Southern Province',
+  'Western Province'
+];
+
+const DISTRICTS: Record<string, string[]> = {
+  'Kigali City': ['Gasabo', 'Kicukiro', 'Nyarugenge'],
+  'Northern Province': ['Burera', 'Gakenke', 'Gicumbi', 'Musanze', 'Rulindo'],
+  'Eastern Province': ['Bugesera', 'Gatsibo', 'Kayonza', 'Kirehe', 'Ngoma', 'Nyagatare', 'Rwamagana'],
+  'Southern Province': ['Gisagara', 'Huye', 'Kamonyi', 'Muhanga', 'Nyamagabe', 'Nyanza', 'Nyaruguru', 'Ruhango'],
+  'Western Province': ['Karongi', 'Ngororero', 'Nyabihu', 'Nyamasheke', 'Rubavu', 'Rusizi', 'Rutsiro']
+};
+
+const SECTORS: Record<string, string[]> = {
+  'Gasabo': ['Nyarutarama', 'Kimihurura', 'Kacyiru', 'Remera', 'Gishushu'],
+  'Kicukiro': ['Gikondo', 'Kicukiro', 'Niboye', 'Kanombe'],
+  'Nyarugenge': ['Nyarugenge', 'Kiyovu', 'Nyamirambo', 'Rugenge'],
+  'Musanze': ['Muhoza', 'Cyuve', 'Kimonyi', 'Muko'],
+  'Rubavu': ['Gisenyi', 'Bugoyi', 'Kigeyo'],
+  'Huye': ['Ngoma', 'Mbazi', 'Ruhashya'],
+  'default': ['Sector 1', 'Sector 2', 'Sector 3']
+};
+
+const CELLS: Record<string, string[]> = {
+  'Nyarutarama': ['Kagugu', 'Rugando', 'Kibagabaga'],
+  'Kimihurura': ['Rugando', 'Kimihurura', 'Urugwiro'],
+  'Gikondo': ['Kanserege', 'Gikondo', 'Rwezamenyo'],
+  'default': ['Cell 1', 'Cell 2', 'Cell 3']
+};
+
+interface Property {
+  id: string;
+  upiNumber: string;
+  ownerName: string;
+  phoneNumber: string;
+  country: string;
+  province: string;
+  district: string;
+  sector: string;
+  cell: string;
+  village: string;
+  status: string;
+  aiValuation?: number;
+  aiConfidence?: number;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+  soldAt?: string;
+}
+
+export default function PropertyDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const [property, setProperty] = useState<Property | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Property>>({});
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [upiError, setUpiError] = useState('');
+
+  // Available options for cascading dropdowns
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
+  const [availableSectors, setAvailableSectors] = useState<string[]>([]);
+  const [availableCells, setAvailableCells] = useState<string[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    fetchPropertyDetail(token);
+  }, [params.id]);
+
+  const fetchPropertyDetail = async (token: string) => {
+    try {
+      const response = await api.get(`/client/myProperties/${params.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        setProperty(response.data.data);
+        setEditForm(response.data.data);
+        // Initialize cascading dropdowns
+        updateAvailableDistricts(response.data.data.province);
+        updateAvailableSectors(response.data.data.district);
+        updateAvailableCells(response.data.data.sector);
+      } else {
+        setError(response.data.error || 'Property not found');
+      }
+    } catch (err: any) {
+      console.error('Error fetching property:', err);
+      setError(err.response?.data?.error || 'Failed to load property details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ========== CASCADING LOCATION UPDATE FUNCTIONS ==========
+  const updateAvailableDistricts = (province: string) => {
+    setAvailableDistricts(DISTRICTS[province] || []);
+  };
+
+  const updateAvailableSectors = (district: string) => {
+    setAvailableSectors(SECTORS[district] || SECTORS.default);
+  };
+
+  const updateAvailableCells = (sector: string) => {
+    setAvailableCells(CELLS[sector] || CELLS.default);
+  };
+
+  const handleProvinceChange = (province: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      province,
+      district: '',  // Reset district
+      sector: '',    // Reset sector
+      cell: ''       // Reset cell
+    }));
+    updateAvailableDistricts(province);
+    setAvailableSectors([]);
+    setAvailableCells([]);
+  };
+
+  const handleDistrictChange = (district: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      district,
+      sector: '',  // Reset sector
+      cell: ''     // Reset cell
+    }));
+    updateAvailableSectors(district);
+    setAvailableCells([]);
+  };
+
+  const handleSectorChange = (sector: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      sector,
+      cell: ''  // Reset cell
+    }));
+    updateAvailableCells(sector);
+  };
+
+  const handleCellChange = (cell: string) => {
+    setEditForm(prev => ({ ...prev, cell }));
+  };
+
+  // ========== UPI VALIDATION ==========
+  const validateUpiNumber = async (upiNumber: string) => {
+    if (upiNumber === property?.upiNumber) return true; // Same UPI, no change
+    
+    const token = localStorage.getItem('token');
+    try {
+      // Check if UPI already exists
+      const response = await api.get(`/myProperties?upiNumber=${upiNumber}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success && response.data.data.length > 0) {
+        setUpiError('UPI number already exists. Please use a different one.');
+        return false;
+      }
+      setUpiError('');
+      return true;
+    } catch (err) {
+      setUpiError('Error validating UPI number');
+      return false;
+    }
+  };
+
+  const handleUpiChange = async (upiNumber: string) => {
+    setEditForm(prev => ({ ...prev, upiNumber }));
+    await validateUpiNumber(upiNumber);
+  };
+
+  // ========== UPDATE FUNCTION ==========
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditForm(property!);
+    setUpiError('');
+    // Reset cascading options
+    updateAvailableDistricts(property!.province);
+    updateAvailableSectors(property!.district);
+    updateAvailableCells(property!.sector);
+  };
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    switch (name) {
+      case 'province':
+        handleProvinceChange(value);
+        break;
+      case 'district':
+        handleDistrictChange(value);
+        break;
+      case 'sector':
+        handleSectorChange(value);
+        break;
+      case 'cell':
+        handleCellChange(value);
+        break;
+      case 'upiNumber':
+        handleUpiChange(value);
+        break;
+      default:
+        setEditForm(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleUpdate = async () => {
+    // Validate UPI before update
+    if (editForm.upiNumber && editForm.upiNumber !== property?.upiNumber) {
+      const isValid = await validateUpiNumber(editForm.upiNumber);
+      if (!isValid) return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    setUpdating(true);
+    try {
+      const response = await api.put(`/client/myProperties/${params.id}`, editForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        setProperty(response.data.data);
+        setIsEditing(false);
+        alert('✅ Property updated successfully!');
+      } else {
+        alert(response.data.error || 'Failed to update property');
+      }
+    } catch (err: any) {
+      console.error('Update error:', err);
+      alert(err.response?.data?.error || 'Failed to update property');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // ========== DELETE FUNCTION ==========
+  const handleDelete = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    setDeleting(true);
+    try {
+      const response = await api.delete(`/client/myProperties/${params.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        alert('✅ Property deleted successfully!');
+        router.push('/clientDashboard');
+      } else {
+        alert(response.data.error || 'Failed to delete property');
+        setDeleteConfirm(false);
+      }
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      alert(err.response?.data?.error || 'Failed to delete property');
+      setDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const badges: Record<string, { bg: string; text: string; icon: JSX.Element }> = {
+      'PENDING': { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: <Clock className="w-4 h-4" /> },
+      'ASSIGNED': { bg: 'bg-blue-100', text: 'text-blue-800', icon: <User className="w-4 h-4" /> },
+      'IN_FIELDWORK': { bg: 'bg-purple-100', text: 'text-purple-800', icon: <MapPinned className="w-4 h-4" /> },
+      'UNDER_REVIEW': { bg: 'bg-orange-100', text: 'text-orange-800', icon: <AlertCircle className="w-4 h-4" /> },
+      'NEEDS_REVISION': { bg: 'bg-red-100', text: 'text-red-800', icon: <XCircle className="w-4 h-4" /> },
+      'APPROVED': { bg: 'bg-teal-100', text: 'text-teal-800', icon: <CheckCircle className="w-4 h-4" /> },
+      'PUBLISHED': { bg: 'bg-green-100', text: 'text-green-800', icon: <CheckCircle className="w-4 h-4" /> },
+      'SOLD': { bg: 'bg-gray-100', text: 'text-gray-800', icon: <DollarSign className="w-4 h-4" /> },
+    };
+    return badges[status] || badges['PENDING'];
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#1B3A5C] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading property details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !property) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-10 h-10 text-red-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Property Not Found</h2>
+          <p className="text-gray-600 mb-4">{error || 'The property you are looking for does not exist.'}</p>
+          <Link href="/client/dashboard" className="inline-flex items-center gap-2 px-4 py-2 bg-[#1B3A5C] text-white rounded-lg hover:bg-[#244d79]">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const statusBadge = getStatusBadge(property.status);
+  const isLocationChanged = editForm.province !== property.province || 
+                            editForm.district !== property.district || 
+                            editForm.sector !== property.sector;
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-5xl mx-auto px-4">
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-md mx-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Delete Property?</h3>
+              </div>
+              <p className="text-gray-600 mb-2">
+                Are you sure you want to delete property <strong>{property.upiNumber}</strong>?
+              </p>
+              <p className="text-gray-500 text-sm mb-6">This action cannot be undone.</p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeleteConfirm(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deleting ? 'Deleting...' : 'Yes, Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center mb-6">
+          <Link href="/client/dashboard" className="inline-flex items-center gap-2 text-[#1B3A5C] hover:text-[#244d79] font-medium">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Link>
+          
+          <div className="flex gap-2">
+            {!isEditing ? (
+              <>
+                <button
+                  onClick={handleEdit}
+                  className="flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => setDeleteConfirm(true)}
+                  className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleUpdate}
+                  disabled={updating || !!upiError}
+                  className="flex items-center gap-2 px-4 py-2 text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  {updating ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-600 border border-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Warning when location changes */}
+        {isEditing && isLocationChanged && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            <p className="text-sm text-yellow-800">
+              Changing location will reset district, sector, and cell selections.
+            </p>
+          </div>
+        )}
+
+        {/* Header Card */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-[#1B3A5C] to-[#244d79] px-6 py-6">
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                {isEditing ? (
+                  <div className="mb-2">
+                    <label className="block text-xs text-indigo-200 mb-1">UPI Number</label>
+                    <input
+                      name="upiNumber"
+                      value={editForm.upiNumber || ''}
+                      onChange={handleEditChange}
+                      className={`text-2xl font-bold text-white bg-white/20 rounded-lg px-3 py-1 w-full max-w-md focus:outline-none focus:ring-2 focus:ring-white/50 ${upiError ? 'border-2 border-red-400' : ''}`}
+                    />
+                    {upiError && <p className="text-xs text-red-200 mt-1">{upiError}</p>}
+                  </div>
+                ) : (
+                  <>
+                    <h1 className="text-2xl font-bold text-white mb-2">
+                      Property {property.upiNumber}
+                    </h1>
+                    <p className="text-indigo-100">UPI: {property.upiNumber}</p>
+                  </>
+                )}
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${statusBadge.bg} ${statusBadge.text}`}>
+                {statusBadge.icon}
+                <span className="text-sm font-medium">{property.status}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                {property.status === 'PUBLISHED' ? <CheckCircle className="w-5 h-5 text-green-500" /> :
+                 property.status === 'NEEDS_REVISION' ? <AlertCircle className="w-5 h-5 text-red-500" /> :
+                 <Clock className="w-5 h-5 text-yellow-500" />}
+              </div>
+              <p className="text-sm text-gray-700">
+                {property.status === 'PENDING' ? 'Your application is pending review. An admin will assign a data collector soon.' :
+                 property.status === 'ASSIGNED' ? 'A data collector has been assigned to your property.' :
+                 property.status === 'IN_FIELDWORK' ? 'A data collector is currently visiting your property.' :
+                 property.status === 'UNDER_REVIEW' ? 'Your property assessment is under review by a supervisor.' :
+                 property.status === 'NEEDS_REVISION' ? 'The data collector needs to update some information.' :
+                 property.status === 'APPROVED' ? 'Your property has been approved and will be published soon.' :
+                 property.status === 'PUBLISHED' ? 'Your property is now live on the platform!' :
+                 property.status === 'SOLD' ? 'This property has been marked as sold.' :
+                 'Status update pending'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Location Information with Cascading Dropdowns */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-[#1B3A5C]" />
+                  <h2 className="font-semibold text-gray-900">Location Details</h2>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Country */}
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Country</p>
+                    {isEditing ? (
+                      <input name="country" value={editForm.country || ''} onChange={handleEditChange} className="mt-1 w-full px-3 py-1 border rounded focus:ring-2 focus:ring-[#1B3A5C]" />
+                    ) : (
+                      <p className="text-sm font-medium mt-1">{property.country}</p>
+                    )}
+                  </div>
+
+                  {/* Province - Cascading */}
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Province</p>
+                    {isEditing ? (
+                      <select
+                        name="province"
+                        value={editForm.province || ''}
+                        onChange={handleEditChange}
+                        className="mt-1 w-full px-3 py-1 border rounded focus:ring-2 focus:ring-[#1B3A5C]"
+                      >
+                        <option value="">Select Province</option>
+                        {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    ) : (
+                      <p className="text-sm font-medium mt-1">{property.province}</p>
+                    )}
+                  </div>
+
+                  {/* District - Depends on Province */}
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">District</p>
+                    {isEditing ? (
+                      <select
+                        name="district"
+                        value={editForm.district || ''}
+                        onChange={handleEditChange}
+                        disabled={!editForm.province}
+                        className="mt-1 w-full px-3 py-1 border rounded focus:ring-2 focus:ring-[#1B3A5C] disabled:bg-gray-100"
+                      >
+                        <option value="">Select District</option>
+                        {availableDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    ) : (
+                      <p className="text-sm font-medium mt-1">{property.district}</p>
+                    )}
+                  </div>
+
+                  {/* Sector - Depends on District */}
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Sector</p>
+                    {isEditing ? (
+                      <select
+                        name="sector"
+                        value={editForm.sector || ''}
+                        onChange={handleEditChange}
+                        disabled={!editForm.district}
+                        className="mt-1 w-full px-3 py-1 border rounded focus:ring-2 focus:ring-[#1B3A5C] disabled:bg-gray-100"
+                      >
+                        <option value="">Select Sector</option>
+                        {availableSectors.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    ) : (
+                      <p className="text-sm font-medium mt-1">{property.sector || 'N/A'}</p>
+                    )}
+                  </div>
+
+                  {/* Cell - Depends on Sector */}
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Cell</p>
+                    {isEditing ? (
+                      <select
+                        name="cell"
+                        value={editForm.cell || ''}
+                        onChange={handleEditChange}
+                        disabled={!editForm.sector}
+                        className="mt-1 w-full px-3 py-1 border rounded focus:ring-2 focus:ring-[#1B3A5C] disabled:bg-gray-100"
+                      >
+                        <option value="">Select Cell</option>
+                        {availableCells.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    ) : (
+                      <p className="text-sm font-medium mt-1">{property.cell || 'N/A'}</p>
+                    )}
+                  </div>
+
+                  {/* Village - Free text */}
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Village</p>
+                    {isEditing ? (
+                      <input name="village" value={editForm.village || ''} onChange={handleEditChange} className="mt-1 w-full px-3 py-1 border rounded" />
+                    ) : (
+                      <p className="text-sm font-medium mt-1">{property.village || 'N/A'}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Owner Information */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-[#1B3A5C]" />
+                  <h2 className="font-semibold text-gray-900">Owner Information</h2>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Owner Name</p>
+                    {isEditing ? (
+                      <input name="ownerName" value={editForm.ownerName || ''} onChange={handleEditChange} className="mt-1 w-full px-3 py-1 border rounded focus:ring-2 focus:ring-[#1B3A5C]" />
+                    ) : (
+                      <p className="text-sm font-medium mt-1">{property.ownerName}</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase">Phone Number</p>
+                    {isEditing ? (
+                      <input name="phoneNumber" value={editForm.phoneNumber || ''} onChange={handleEditChange} className="mt-1 w-full px-3 py-1 border rounded" />
+                    ) : (
+                      <p className="text-sm font-medium mt-1">{property.phoneNumber}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-[#1B3A5C]" />
+                  <h2 className="font-semibold text-gray-900">Property Timeline</h2>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="flex items-center justify-between">
+                  <div><p className="text-xs text-gray-500">Submitted</p><p className="text-sm font-medium">{formatDate(property.createdAt)}</p></div>
+                  {property.publishedAt && <div><p className="text-xs text-gray-500">Published</p><p className="text-sm font-medium">{formatDate(property.publishedAt)}</p></div>}
+                  {property.soldAt && <div><p className="text-xs text-gray-500">Sold</p><p className="text-sm font-medium">{formatDate(property.soldAt)}</p></div>}
+                </div>
+                <Link href={`/myProperties/${property.id}/timeline`} className="inline-flex items-center gap-2 text-[#1B3A5C] hover:text-[#244d79] text-sm font-medium mt-4">
+                  View Full Timeline →
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Valuation */}
+          <div className="space-y-6">
+            <div className="bg-gradient-to-br from-[#1B3A5C] to-[#244d79] rounded-xl shadow-lg overflow-hidden">
+              <div className="p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="w-5 h-5 text-white/80" />
+                  <h3 className="text-white/80 text-sm uppercase tracking-wide">AI Valuation</h3>
+                </div>
+                {property.aiValuation ? (
+                  <>
+                    <p className="text-3xl font-bold text-white mb-2">{property.aiValuation.toLocaleString()} RWF</p>
+                    {property.aiConfidence && (
+                      <div className="mt-3">
+                        <div className="flex justify-between text-xs text-white/80 mb-1"><span>Confidence Score</span><span>{property.aiConfidence}%</span></div>
+                        <div className="w-full bg-white/20 rounded-full h-2"><div className="bg-white rounded-full h-2" style={{ width: `${property.aiConfidence}%` }} /></div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-white/80 text-sm">Valuation in progress. Once completed, AI estimate will appear here.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
