@@ -431,35 +431,42 @@ export default function SupervisorDashboard() {
   };
 
   const handleAssignCollector = async () => {
-    if (!selectedProperty || !selectedDataCollector) {
-      alert('Please select a data collector');
-      return;
-    }
+  if (!selectedProperty || !selectedDataCollector) {
+    alert('Please select a data collector');
+    return;
+  }
+  
+  setLoadingAction(true);
+  try {
+    const token = localStorage.getItem('token');
     
-    setLoadingAction(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await api.post(`/supervisor/dashboard/properties/${selectedProperty.id}/assign`, {
-        dataCollectorId: selectedDataCollector
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      
-      if (response.data.success) {
-        alert('Data collector assigned successfully!');
-        setShowAssignModal(false);
-        setShowDetailsModal(false);
-        setSelectedProperty(null);
-        setSelectedDataCollector('');
-        fetchDashboardData();
-      } else {
-        alert(response.data.error || 'Failed to assign collector');
-      }
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Error assigning collector');
-    } finally {
-      setLoadingAction(false);
+    // Make sure you're sending 'collectorId' - exactly as your backend expects
+    const response = await api.post(
+      `/supervisor/dashboard/properties/${selectedProperty.id}/assign`,
+      {
+        collectorId: selectedDataCollector,  // ← This must match backend field name
+        notes: "Review this property"
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (response.data.success) {
+      alert('Data collector assigned successfully!');
+      setShowAssignModal(false);
+      setShowDetailsModal(false);
+      setSelectedProperty(null);
+      setSelectedDataCollector('');
+      fetchDashboardData();
+    } else {
+      alert(response.data.error || 'Failed to assign collector');
     }
-  };
-
+  } catch (err: any) {
+    console.error('Assignment error:', err);
+    console.error('Error response:', err.response?.data);
+    alert(err.response?.data?.error || 'Error assigning collector');
+  } finally {
+    setLoadingAction(false);
+  }
+};
   const handleApproveProperty = async (propertyId: string) => {
     setLoadingAction(true);
     try {
@@ -720,60 +727,78 @@ export default function SupervisorDashboard() {
         </header>
 
         <div className="p-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Properties</p>
-                  <p className="text-3xl font-bold text-gray-900">{totalProperties}</p>
-                  <p className="text-xs text-gray-500 mt-1">All properties in system</p>
-                </div>
-                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-indigo-600" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Pending Approval</p>
-                  <p className="text-3xl font-bold text-yellow-600">{counts.pending}</p>
-                  <p className="text-xs text-green-600 mt-1">↑ {pendingPercentage}% of total</p>
-                </div>
-                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-yellow-600" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">In Progress</p>
-                  <p className="text-3xl font-bold text-blue-600">{inProgress}</p>
-                  <p className="text-xs text-green-600 mt-1">↑ {inProgressPercentage}% of total</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Activity className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Completed</p>
-                  <p className="text-3xl font-bold text-green-600">{completed}</p>
-                  <p className="text-xs text-green-600 mt-1">↑ {completedPercentage}% of total</p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Stats Cards - 5 cards: Total Properties, Pending, In Fieldwork, Under Review, Published */}
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+  {/* Card 1: Total Properties */}
+  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-500">Total Properties</p>
+        <p className="text-3xl font-bold text-gray-900">{totalProperties}</p>
+        <p className="text-xs text-gray-500 mt-1">All properties in system</p>
+      </div>
+      <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+        <Building2 className="w-6 h-6 text-indigo-600" />
+      </div>
+    </div>
+  </div>
+  
+  {/* Card 2: Pending */}
+  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-500">Pending</p>
+        <p className="text-3xl font-bold text-yellow-600">{counts.pending}</p>
+        <p className="text-xs text-gray-500 mt-1">Awaiting assignment</p>
+      </div>
+      <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+        <Clock className="w-6 h-6 text-yellow-600" />
+      </div>
+    </div>
+  </div>
+  
+  {/* Card 3: In Fieldwork */}
+  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-500">In Fieldwork</p>
+        <p className="text-3xl font-bold text-blue-600">{counts.inFieldwork || 0}</p>
+        <p className="text-xs text-gray-500 mt-1">Data collection in progress</p>
+      </div>
+      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+        <Activity className="w-6 h-6 text-blue-600" />
+      </div>
+    </div>
+  </div>
+  
+  {/* Card 4: Under Review */}
+  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-500">Under Review</p>
+        <p className="text-3xl font-bold text-orange-600">{counts.underReview}</p>
+        <p className="text-xs text-gray-500 mt-1">Ready for approval</p>
+      </div>
+      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+        <Eye className="w-6 h-6 text-orange-600" />
+      </div>
+    </div>
+  </div>
+  
+  {/* Card 5: Published */}
+  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-500">Published</p>
+        <p className="text-3xl font-bold text-green-600">{counts.published}</p>
+        <p className="text-xs text-gray-500 mt-1">Live on platform</p>
+      </div>
+      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+        <Star className="w-6 h-6 text-green-600" />
+      </div>
+    </div>
+  </div>
+</div>
 
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -1395,10 +1420,23 @@ export default function SupervisorDashboard() {
             <div className="p-6">
               <div className="mb-4"><p className="text-sm text-gray-600 mb-1">Property:</p><p className="font-medium text-gray-900">{selectedProperty.ownerName} - {selectedProperty.upiNumber}</p></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-2">Select Data Collector</label>
-                <select value={selectedDataCollector} onChange={(e) => setSelectedDataCollector(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B3A5C] focus:border-[#1B3A5C] outline-none">
-                  <option value="">Choose a collector...</option>
-                  {dataCollectors.filter(c => c.isActive).map((collector) => (<option key={collector.id} value={collector.id}>{collector.name} - {collector.email}</option>))}
-                </select>
+                <select 
+  value={selectedDataCollector} 
+  onChange={(e) => {
+    console.log('Selected collector ID:', e.target.value); // Debug log
+    setSelectedDataCollector(e.target.value);
+  }} 
+  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B3A5C] focus:border-[#1B3A5C] outline-none"
+>
+  <option value="">Choose a collector...</option>
+  {dataCollectors
+    .filter(c => c.isActive === true)
+    .map((collector) => (
+      <option key={collector.id} value={collector.id}>
+        {collector.name} - {collector.email}
+      </option>
+    ))}
+</select>
               </div>
               <div className="flex gap-3 mt-6">
                 <button onClick={() => setShowAssignModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
