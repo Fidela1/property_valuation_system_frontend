@@ -269,6 +269,10 @@ export default function FieldDataPage() {
  const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   
+  console.log('=== FORM SUBMISSION START ===');
+  console.log('Property ID:', propertyId);
+  console.log('Uploaded images count:', uploadedImages.length);
+  
   if (!propertyId) {
     alert('Property ID not found. Please go back and try again.');
     return;
@@ -290,45 +294,62 @@ export default function FieldDataPage() {
   try {
     const token = localStorage.getItem('token');
     
-    // STEP 1: Upload images
+    // STEP 1: Upload images - Use the correct endpoint with property ID
     const uploadedImageUrls = [];
     
     for (let i = 0; i < uploadedImages.length; i++) {
-  const image = uploadedImages[i];
-
-  const imageFormData = new FormData();
-  imageFormData.append('images', image);
-  
-  const uploadUrl = `/upload/properties/${propertyId}/images`;
-  
-  try {
-    const uploadResponse = await api.post(uploadUrl, imageFormData, {
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data'
-      },
-      timeout: 30000
-    });
-
-    if (uploadResponse.status === 200 || uploadResponse.status === 201) {
-      const timestamp = Date.now();
-      const uniqueId = `${timestamp}_${i}_${image.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const imageUrl = `/uploads/properties/${uniqueId}`;
+      const image = uploadedImages[i];
+      const imageFormData = new FormData();
+      imageFormData.append('images', image);
       
-      uploadedImageUrls.push({
-        url: imageUrl,
-        publicId: uniqueId
+      // ✅ FIX: Use the correct endpoint with property ID
+      const uploadUrl = `/upload/properties/${propertyId}/images`;
+      console.log(`Uploading image ${i + 1} to:`, uploadUrl);
+      
+      const uploadResponse = await api.post(uploadUrl, imageFormData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
       });
       
-      console.log(`Image ${i + 1} URL (constructed):`, imageUrl);
-    } else {
-      console.error('Upload failed with status:', uploadResponse.status);
+      console.log('Upload response:', uploadResponse.data);
+      
+      // ✅ FIX: Handle the response correctly
+      if (uploadResponse.data.success) {
+        // Check if images array is returned
+        if (uploadResponse.data.data?.images && Array.isArray(uploadResponse.data.data.images)) {
+          for (const img of uploadResponse.data.data.images) {
+            uploadedImageUrls.push({
+              url: img.url,
+              publicId: img.publicId
+            });
+            console.log(`Image URL from backend:`, img.url);
+          }
+        } 
+        // Check if single image is returned
+        else if (uploadResponse.data.data?.url) {
+          uploadedImageUrls.push({
+            url: uploadResponse.data.data.url,
+            publicId: uploadResponse.data.data.publicId
+          });
+          console.log(`Image URL from backend:`, uploadResponse.data.data.url);
+        }
+        else {
+          console.error('No image URL in response:', uploadResponse.data);
+        }
+      } else {
+        console.error('Upload failed:', uploadResponse.data.error);
+      }
     }
-  } catch (uploadError: any) {
-    throw uploadError;
-  }
-}
-
+    
+    console.log('All uploaded image URLs:', uploadedImageUrls);
+    
+    if (uploadedImageUrls.length === 0) {
+      throw new Error('No images were successfully uploaded');
+    }
+    
+    // STEP 2: Submit field data
     const fieldDataPayload = {
       propertyId: propertyId,
       latitude: parseFloat(String(formData.latitude)),
@@ -366,6 +387,8 @@ export default function FieldDataPage() {
       images: uploadedImageUrls
     };
     
+    console.log('Submitting field data payload:', JSON.stringify(fieldDataPayload, null, 2));
+    
     const response = await api.post('/collector/dashboard/field-data', fieldDataPayload, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -377,6 +400,7 @@ export default function FieldDataPage() {
       alert(response.data.error || 'Failed to submit field data');
     }
   } catch (err: any) {
+    console.error('Submit error:', err);
     alert(err.response?.data?.error || err.message || 'Failed to submit field data');
   } finally {
     setSubmitting(false);

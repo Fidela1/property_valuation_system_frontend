@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getImageUrl } from '@/lib/imageUtils';
 import Link from 'next/link';
 import {
   Home,
