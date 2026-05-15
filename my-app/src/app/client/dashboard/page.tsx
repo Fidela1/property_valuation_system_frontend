@@ -42,7 +42,7 @@ export default function ClientDashboard() {
     inFieldwork: 0,
     underReview: 0,
     pending: 0,
-    published: 0
+    approved: 0
   });
   const [counts, setCounts] = useState({
     total: 0,
@@ -75,12 +75,9 @@ export default function ClientDashboard() {
     setError(null);
     
     try {
-      console.log('🔍 Fetching properties from: /client/myProperties');
       const response = await api.get('/client/myProperties', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
-      console.log('📦 Backend response:', response.data);
       
       if (response.data.success) {
         let propertiesData = [];
@@ -119,13 +116,12 @@ export default function ClientDashboard() {
         
         setProperties(propertiesData);
         
-        // Calculate filter counts
         setFilterCounts({
           all: propertiesData.length,
           inFieldwork: propertiesData.filter((p: any) => p.status === 'IN_FIELDWORK').length,
           underReview: propertiesData.filter((p: any) => p.status === 'UNDER_REVIEW').length,
           pending: propertiesData.filter((p: any) => p.status === 'PENDING').length,
-          published: propertiesData.filter((p: any) => p.status === 'PUBLISHED').length
+          approved: propertiesData.filter((p: any) => p.status === 'APPROVED').length
         });
       } else {
         setError(response.data.error || 'Failed to load properties');
@@ -180,7 +176,7 @@ export default function ClientDashboard() {
       'IN_FIELDWORK': 'bg-blue-100 text-blue-800',
       'UNDER_REVIEW': 'bg-orange-100 text-orange-800',
       'NEEDS_REVISION': 'bg-red-100 text-red-800',
-      'APPROVED': 'bg-teal-100 text-teal-800',
+      'APPROVED': 'bg-green-100 text-green-800',
       'PUBLISHED': 'bg-green-100 text-green-800',
       'SOLD': 'bg-gray-100 text-gray-800',
       'ARCHIVED': 'bg-gray-100 text-gray-800',
@@ -198,13 +194,12 @@ export default function ClientDashboard() {
     });
   };
 
-  // Filter properties based on active filter
   const getFilteredProperties = () => {
     if (activeFilter === 'all') return properties;
     if (activeFilter === 'inFieldwork') return properties.filter((p: any) => p.status === 'IN_FIELDWORK');
     if (activeFilter === 'underReview') return properties.filter((p: any) => p.status === 'UNDER_REVIEW');
     if (activeFilter === 'pending') return properties.filter((p: any) => p.status === 'PENDING');
-    if (activeFilter === 'published') return properties.filter((p: any) => p.status === 'PUBLISHED');
+    if (activeFilter === 'approved') return properties.filter((p: any) => p.status === 'APPROVED');
     return properties;
   };
 
@@ -393,15 +388,14 @@ export default function ClientDashboard() {
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 </div>
-                <span className="text-2xl font-bold text-green-600">{counts.published}</span>
+                <span className="text-2xl font-bold text-green-600">{counts.approved}</span>
               </div>
-              <p className="text-sm text-gray-600">Published</p>
+              <p className="text-sm text-gray-600">Approved</p>
             </div>
           </div>
 
           {/* Properties List with Filter Tabs */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            {/* Header with Add Button and Filter Tabs */}
             <div className="px-6 pt-4 pb-2 border-b border-gray-100">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">All Properties</h3>
@@ -457,14 +451,14 @@ export default function ClientDashboard() {
                   Pending ({filterCounts.pending})
                 </button>
                 <button
-                  onClick={() => setActiveFilter('published')}
+                  onClick={() => setActiveFilter('approved')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                    activeFilter === 'published'
+                    activeFilter === 'approved'
                       ? 'bg-green-600 text-white'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  Published ({filterCounts.published})
+                  Approved ({filterCounts.approved})
                 </button>
               </div>
             </div>
@@ -478,7 +472,7 @@ export default function ClientDashboard() {
                 <p className="text-gray-500 mb-4">
                   {activeFilter === 'all' 
                     ? 'Get started by adding your first property'
-                    : `No properties with status "${activeFilter.replace(/([A-Z])/g, ' $1').trim()}"`}
+                    : `No properties with status "${activeFilter === 'approved' ? 'Approved' : activeFilter.replace(/([A-Z])/g, ' $1').trim()}"`}
                 </p>
                 {activeFilter === 'all' && (
                   <Link
@@ -522,9 +516,7 @@ export default function ClientDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <p className="text-sm text-gray-700">
-                            {formatDate(property.createdAt)}
-                          </p>
+                          <p className="text-sm text-gray-700">{formatDate(property.createdAt)}</p>
                         </td>
                         <td className="px-6 py-4">
                           {property.aiValuation ? (
@@ -603,8 +595,8 @@ export default function ClientDashboard() {
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                 disabled={deleting}
+                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50"
               >
                 {deleting ? (
                   <>

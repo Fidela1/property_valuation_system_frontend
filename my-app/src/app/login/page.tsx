@@ -94,7 +94,7 @@ export default function LoginPage() {
           priority
           sizes="50vw"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/80 to-purple-900/80"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/10 to-black-100/10"></div>
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-12 text-center">
           <Link 
             href="/" 
@@ -178,17 +178,7 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <input
-                  id="remember"
-                  name="remember"
-                  type="checkbox"
-                  checked={formData.remember}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-                <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
-                  Remember for 30 days
-                </label>
+                
               </div>
               <Link href="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-500">
                 Forgot password?

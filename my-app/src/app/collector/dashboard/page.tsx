@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getImageUrl } from '@/lib/imageUtils';
 import Link from 'next/link';
 import {
   Home,
@@ -37,7 +36,8 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
-  Building2
+  Building2,
+  Edit
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -60,11 +60,13 @@ interface Assignment {
 
 interface Submission {
   id: string;
+  fieldDataId?: string;
   propertyId: string;
   property: {
     upiNumber: string;
     ownerName: string;
     district: string;
+    status: string;
   };
   submittedAt: string;
   status: string;
@@ -150,7 +152,6 @@ export default function CollectorDashboard() {
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, href: '/collector/dashboard', current: true },
     { name: 'Assignments', icon: ClipboardList, href: '/collector/dashboard/assignments', current: false },
-    { name: 'Submissions', icon: FileText, href: '/collector/submissions', current: false },
     { name: 'Settings', icon: Settings, href: '/collector/settings', current: false },
   ];
 
@@ -193,7 +194,6 @@ export default function CollectorDashboard() {
         api.get('/collector/dashboard/revisions', { headers })
       ]);
       
-      // Handle stats - map backend counts to frontend expected field names
       if (statsRes.data.success) {
         const counts = statsRes.data.data?.counts || statsRes.data.data;
         setStats({
@@ -206,7 +206,6 @@ export default function CollectorDashboard() {
         });
       }
       
-      // Handle assignments - backend returns { properties: [...], pagination: {...} }
       if (assignmentsRes.data.success) {
         const assignmentsData = assignmentsRes.data.data?.properties || assignmentsRes.data.data || [];
         setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
@@ -214,15 +213,29 @@ export default function CollectorDashboard() {
         setAssignments([]);
       }
       
-      // Handle submissions
       if (submissionsRes.data.success) {
-        const submissionsData = submissionsRes.data.data?.submissions || submissionsRes.data.data?.properties || submissionsRes.data.data || [];
-        setSubmissions(Array.isArray(submissionsData) ? submissionsData : []);
+        let submissionsData = submissionsRes.data.data?.submissions || submissionsRes.data.data?.properties || submissionsRes.data.data || [];
+        
+        const mappedSubmissions = submissionsData.map((item: any) => ({
+          id: item.id,
+          fieldDataId: item.id,
+          propertyId: item.propertyId,
+          property: {
+            upiNumber: item.property?.upiNumber,
+            ownerName: item.property?.ownerName,
+            district: item.property?.district,
+            status: item.property?.status
+          },
+          submittedAt: item.submittedAt,
+          status: item.property?.status,
+          valuationAmount: item.valuationAmount
+        }));
+        
+        setSubmissions(Array.isArray(mappedSubmissions) ? mappedSubmissions : []);
       } else {
         setSubmissions([]);
       }
       
-      // Handle revisions
       if (revisionsRes.data.success) {
         const revisionsData = revisionsRes.data.data?.revisions || revisionsRes.data.data || [];
         setRevisions(Array.isArray(revisionsData) ? revisionsData : []);
@@ -476,42 +489,53 @@ export default function CollectorDashboard() {
         </header>
 
         <div className="p-6">
-          {/* Stats Cards */}
+          {/* Stats Cards with Colored Left Borders */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Assignments</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats?.totalAssignments || 0}</p>
+            <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-indigo-500 overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Assignments</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats?.totalAssignments || 0}</p>
+                  </div>
+                  <ClipboardList className="w-8 h-8 text-indigo-500 opacity-50" />
                 </div>
-                <ClipboardList className="w-8 h-8 text-indigo-500 opacity-50" />
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Pending Acceptance</p>
-                  <p className="text-3xl font-bold text-yellow-600">{stats?.pendingAcceptance || 0}</p>
+            
+            <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-yellow-500 overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Pending Acceptance</p>
+                    <p className="text-3xl font-bold text-yellow-600">{stats?.pendingAcceptance || 0}</p>
+                  </div>
+                  <Clock className="w-8 h-8 text-yellow-500 opacity-50" />
                 </div>
-                <Clock className="w-8 h-8 text-yellow-500 opacity-50" />
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">In Progress</p>
-                  <p className="text-3xl font-bold text-blue-600">{stats?.inProgress || 0}</p>
+            
+            <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-blue-500 overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">In Progress</p>
+                    <p className="text-3xl font-bold text-blue-600">{stats?.inProgress || 0}</p>
+                  </div>
+                  <Activity className="w-8 h-8 text-blue-500 opacity-50" />
                 </div>
-                <Activity className="w-8 h-8 text-blue-500 opacity-50" />
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Completed</p>
-                  <p className="text-3xl font-bold text-green-600">{stats?.completed || 0}</p>
+            
+            <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-green-500 overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Completed</p>
+                    <p className="text-3xl font-bold text-green-600">{stats?.completed || 0}</p>
+                  </div>
+                  <CheckCircle className="w-8 h-8 text-green-500 opacity-50" />
                 </div>
-                <CheckCircle className="w-8 h-8 text-green-500 opacity-50" />
               </div>
             </div>
           </div>
@@ -623,7 +647,7 @@ export default function CollectorDashboard() {
                 </div>
               )}
 
-              {/* Submissions Tab */}
+              {/* Submissions Tab with Edit Button */}
               {activeTab === 'submissions' && submissions.length === 0 && (
                 <div className="text-center py-12">
                   <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -641,33 +665,56 @@ export default function CollectorDashboard() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valuation</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {submissions.map((submission) => (
-                        <tr key={submission.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4">
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{submission.property?.ownerName}</p>
-                              <p className="text-xs text-gray-500">UPI: {submission.property?.upiNumber}</p>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{submission.property?.district}</td>
-                          <td className="px-6 py-4">
-                            <span className="font-semibold text-indigo-600">{formatCurrency(submission.valuationAmount || 0)}</span>
-                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">{formatDate(submission.submittedAt)}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              submission.status === 'UNDER_REVIEW' ? 'bg-yellow-100 text-yellow-800' :
-                              submission.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {submission.status}
-                            </span>
-                           </td>
+                      {submissions.map((submission) => {
+                        const submissionStatus = submission.status || submission.property?.status;
+                        const isEditable = submissionStatus === 'UNDER_REVIEW' || submissionStatus === 'NEEDS_REVISION';
+                        
+                        return (
+                          <tr key={submission.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{submission.property?.ownerName}</p>
+                                <p className="text-xs text-gray-500">UPI: {submission.property?.upiNumber}</p>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{submission.property?.district}</td>
+                            <td className="px-6 py-4">
+                              <span className="font-semibold text-indigo-600">{formatCurrency(submission.valuationAmount || 0)}</span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">{formatDate(submission.submittedAt)}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                submissionStatus === 'UNDER_REVIEW' ? 'bg-yellow-100 text-yellow-800' :
+                                submissionStatus === 'NEEDS_REVISION' ? 'bg-red-100 text-red-800' :
+                                submissionStatus === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {submissionStatus || 'PENDING'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              {isEditable && (
+                                <Link
+                                  href={`/collector/dashboard/field-data/${submission.fieldDataId || submission.id}`}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                  Edit
+                                </Link>
+                              )}
+                              {submissionStatus === 'APPROVED' && (
+                                <span className="text-green-600 text-sm flex items-center gap-1">
+                                  <CheckCircle className="w-4 h-4" /> Approved
+                                </span>
+                              )}
+                            </td>
                           </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

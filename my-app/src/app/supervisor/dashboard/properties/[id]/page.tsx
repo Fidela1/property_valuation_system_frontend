@@ -120,20 +120,34 @@ export default function PropertyReviewPage() {
     } catch (err) { console.error('Error fetching collectors:', err); }
   };
 
-  const handleAssign = async () => {
-    if (!selectedCollector) { alert('Please select a data collector'); return; }
-    setActionLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await api.post(`/supervisor/dashboard/properties/${params.id}/assign`, { dataCollectorId: selectedCollector }, { headers: { Authorization: `Bearer ${token}` } });
-      if (response.data.success) {
-        alert('Data collector assigned successfully!');
-        setShowAssignModal(false);
-        fetchProperty();
-      } else alert(response.data.error || 'Failed to assign');
-    } catch (err: any) { alert(err.response?.data?.error || 'Error assigning collector'); }
-    finally { setActionLoading(false); }
-  };
+ const handleAssign = async () => {
+  if (!selectedCollector) { 
+    alert('Please select a data collector'); 
+    return; 
+  }
+  
+  setActionLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.post(
+      `/supervisor/dashboard/properties/${params.id}/assign`,
+      { collectorEmail: selectedCollector }, 
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    
+    if (response.data.success) {
+      alert('Data collector assigned successfully!');
+      setShowAssignModal(false);
+      fetchProperty();
+    } else {
+      alert(response.data.error || 'Failed to assign');
+    }
+  } catch (err: any) { 
+    alert(err.response?.data?.error || 'Error assigning collector'); 
+  } finally { 
+    setActionLoading(false); 
+  }
+};
 
   const handleApprove = async () => {
     setActionLoading(true);
@@ -146,17 +160,32 @@ export default function PropertyReviewPage() {
     finally { setActionLoading(false); }
   };
 
-  const handleReject = async () => {
-    if (!rejectionReason) { alert('Please provide a reason for rejection'); return; }
-    setActionLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await api.post(`/supervisor/dashboard/properties/${params.id}/reject`, { reason: rejectionReason }, { headers: { Authorization: `Bearer ${token}` } });
-      if (response.data.success) { alert('Property rejected successfully!'); setShowRejectModal(false); fetchProperty(); }
-      else alert(response.data.error || 'Failed to reject');
-    } catch (err: any) { alert(err.response?.data?.error || 'Error rejecting property'); }
-    finally { setActionLoading(false); }
-  };
+ const handleReject = async () => {
+  if (!rejectionReason) { 
+    alert('Please provide a reason for rejection'); 
+    return; 
+  }
+  setActionLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.post(
+      `/supervisor/dashboard/properties/${params.id}/reject`, 
+      { comment: rejectionReason },  // ✅ Change from "reason" to "comment"
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (response.data.success) { 
+      alert('Property rejected successfully!'); 
+      setShowRejectModal(false); 
+      fetchProperty(); 
+    } else {
+      alert(response.data.error || 'Failed to reject');
+    }
+  } catch (err: any) { 
+    alert(err.response?.data?.error || 'Error rejecting property'); 
+  } finally { 
+    setActionLoading(false); 
+  }
+};
 
   const handlePublish = async () => {
     setActionLoading(true);
@@ -190,7 +219,7 @@ export default function PropertyReviewPage() {
       <div className="max-w-7xl mx-auto px-4">
         {/* Header Navigation */}
         <div className="flex justify-between items-center mb-6">
-          <Link href="/supervisor/dashboard" className="inline-flex items-center gap-2 text-[#1B3A5C] hover:text-[#2C5F8A] font-medium">
+          <Link href="/supervisor/dashboard/properties" className="inline-flex items-center gap-2 text-[#1B3A5C] hover:text-[#2C5F8A] font-medium">
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard
           </Link>
           <div className="flex gap-2">
@@ -241,7 +270,7 @@ export default function PropertyReviewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Property Info */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Basic Information */}
+           
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 bg-gray-50"><div className="flex items-center gap-2"><Info className="w-5 h-5 text-[#1B3A5C]" /><h2 className="font-semibold text-gray-900">Property Information</h2></div></div>
               <div className="p-5">
@@ -270,200 +299,199 @@ export default function PropertyReviewPage() {
             </div>
 
             {/* Property Features */}
-            {/* Property Features */}
-{property.fieldData && (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-    <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
-      <div className="flex items-center gap-2">
-        <Building2 className="w-5 h-5 text-[#1B3A5C]" />
-        <h2 className="font-semibold text-gray-900">Property Features</h2>
-      </div>
-    </div>
-    <div className="p-5">
-      {/* Basic Property Details */}
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Basic Details</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {property.fieldData.propertyType && (
-            <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium">{property.fieldData.propertyType}</p></div>
-          )}
-          {property.fieldData.condition && (
-            <div><p className="text-xs text-gray-500">Condition</p><p className="font-medium">{property.fieldData.condition}</p></div>
-          )}
-          {property.fieldData.landSize && (
-            <div><p className="text-xs text-gray-500">Land Size</p><p className="font-medium">{property.fieldData.landSize} m²</p></div>
-          )}
-          {property.fieldData.buildingSize && (
-            <div><p className="text-xs text-gray-500">Building Size</p><p className="font-medium">{property.fieldData.buildingSize} m²</p></div>
-          )}
-          {property.fieldData.bedrooms !== undefined && (
-            <div><p className="text-xs text-gray-500">Bedrooms</p><p className="font-medium">{property.fieldData.bedrooms}</p></div>
-          )}
-          {property.fieldData.bathrooms !== undefined && (
-            <div><p className="text-xs text-gray-500">Bathrooms</p><p className="font-medium">{property.fieldData.bathrooms}</p></div>
-          )}
-          {property.fieldData.yearBuilt && (
-            <div><p className="text-xs text-gray-500">Year Built</p><p className="font-medium">{property.fieldData.yearBuilt}</p></div>
-          )}
-          {property.fieldData.parkingSpaces !== undefined && (
-            <div><p className="text-xs text-gray-500">Parking Spaces</p><p className="font-medium">{property.fieldData.parkingSpaces}</p></div>
-          )}
-        </div>
-      </div>
+            {property.fieldData && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-[#1B3A5C]" />
+                    <h2 className="font-semibold text-gray-900">Property Features</h2>
+                  </div>
+                </div>
+                <div className="p-5">
+                  {/* Basic Property Details */}
+                  <div className="mb-4">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Basic Details</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {property.fieldData.propertyType && (
+                        <div><p className="text-xs text-gray-500">Property Type</p><p className="font-medium">{property.fieldData.propertyType}</p></div>
+                      )}
+                      {property.fieldData.condition && (
+                        <div><p className="text-xs text-gray-500">Condition</p><p className="font-medium">{property.fieldData.condition}</p></div>
+                      )}
+                      {property.fieldData.landSize && (
+                        <div><p className="text-xs text-gray-500">Land Size</p><p className="font-medium">{property.fieldData.landSize} m²</p></div>
+                      )}
+                      {property.fieldData.buildingSize && (
+                        <div><p className="text-xs text-gray-500">Building Size</p><p className="font-medium">{property.fieldData.buildingSize} m²</p></div>
+                      )}
+                      {property.fieldData.bedrooms !== undefined && (
+                        <div><p className="text-xs text-gray-500">Bedrooms</p><p className="font-medium">{property.fieldData.bedrooms}</p></div>
+                      )}
+                      {property.fieldData.bathrooms !== undefined && (
+                        <div><p className="text-xs text-gray-500">Bathrooms</p><p className="font-medium">{property.fieldData.bathrooms}</p></div>
+                      )}
+                      {property.fieldData.yearBuilt && (
+                        <div><p className="text-xs text-gray-500">Year Built</p><p className="font-medium">{property.fieldData.yearBuilt}</p></div>
+                      )}
+                      {property.fieldData.parkingSpaces !== undefined && (
+                        <div><p className="text-xs text-gray-500">Parking Spaces</p><p className="font-medium">{property.fieldData.parkingSpaces}</p></div>
+                      )}
+                    </div>
+                  </div>
 
-      {/* Garden Details */}
-      {(property.fieldData.hasGarden !== undefined || property.fieldData.gardenSize || property.fieldData.gardenType) && (
-        <div className="mb-4 pt-3 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-            <TreePine className="w-4 h-4" /> Garden Details
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {property.fieldData.hasGarden !== undefined && (
-              <div><p className="text-xs text-gray-500">Has Garden</p><p className="font-medium">{property.fieldData.hasGarden ? 'Yes' : 'No'}</p></div>
-            )}
-            {property.fieldData.gardenSize && (
-              <div><p className="text-xs text-gray-500">Garden Size</p><p className="font-medium">{property.fieldData.gardenSize} m²</p></div>
-            )}
-            {property.fieldData.gardenType && (
-              <div><p className="text-xs text-gray-500">Garden Type</p><p className="font-medium">{property.fieldData.gardenType}</p></div>
-            )}
-          </div>
-        </div>
-      )}
+                  {/* Garden Details */}
+                  {(property.fieldData.hasGarden !== undefined || property.fieldData.gardenSize || property.fieldData.gardenType) && (
+                    <div className="mb-4 pt-3 border-t border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <TreePine className="w-4 h-4" /> Garden Details
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {property.fieldData.hasGarden !== undefined && (
+                          <div><p className="text-xs text-gray-500">Has Garden</p><p className="font-medium">{property.fieldData.hasGarden ? 'Yes' : 'No'}</p></div>
+                        )}
+                        {property.fieldData.gardenSize && (
+                          <div><p className="text-xs text-gray-500">Garden Size</p><p className="font-medium">{property.fieldData.gardenSize} m²</p></div>
+                        )}
+                        {property.fieldData.gardenType && (
+                          <div><p className="text-xs text-gray-500">Garden Type</p><p className="font-medium">{property.fieldData.gardenType}</p></div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-      {/* Annex Details */}
-      {(property.fieldData.hasAnnex !== undefined || property.fieldData.annexType || property.fieldData.annexSize) && (
-        <div className="mb-4 pt-3 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-            <Building2 className="w-4 h-4" /> Annex Details
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {property.fieldData.hasAnnex !== undefined && (
-              <div><p className="text-xs text-gray-500">Has Annex</p><p className="font-medium">{property.fieldData.hasAnnex ? 'Yes' : 'No'}</p></div>
-            )}
-            {property.fieldData.annexType && (
-              <div><p className="text-xs text-gray-500">Annex Type</p><p className="font-medium">{property.fieldData.annexType}</p></div>
-            )}
-            {property.fieldData.annexSize && (
-              <div><p className="text-xs text-gray-500">Annex Size</p><p className="font-medium">{property.fieldData.annexSize} m²</p></div>
-            )}
-            {property.fieldData.annexBedrooms !== undefined && (
-              <div><p className="text-xs text-gray-500">Annex Bedrooms</p><p className="font-medium">{property.fieldData.annexBedrooms}</p></div>
-            )}
-            {property.fieldData.annexBathrooms !== undefined && (
-              <div><p className="text-xs text-gray-500">Annex Bathrooms</p><p className="font-medium">{property.fieldData.annexBathrooms}</p></div>
-            )}
-          </div>
-        </div>
-      )}
+                  {/* Annex Details */}
+                  {(property.fieldData.hasAnnex !== undefined || property.fieldData.annexType || property.fieldData.annexSize) && (
+                    <div className="mb-4 pt-3 border-t border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <Building2 className="w-4 h-4" /> Annex Details
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {property.fieldData.hasAnnex !== undefined && (
+                          <div><p className="text-xs text-gray-500">Has Annex</p><p className="font-medium">{property.fieldData.hasAnnex ? 'Yes' : 'No'}</p></div>
+                        )}
+                        {property.fieldData.annexType && (
+                          <div><p className="text-xs text-gray-500">Annex Type</p><p className="font-medium">{property.fieldData.annexType}</p></div>
+                        )}
+                        {property.fieldData.annexSize && (
+                          <div><p className="text-xs text-gray-500">Annex Size</p><p className="font-medium">{property.fieldData.annexSize} m²</p></div>
+                        )}
+                        {property.fieldData.annexBedrooms !== undefined && (
+                          <div><p className="text-xs text-gray-500">Annex Bedrooms</p><p className="font-medium">{property.fieldData.annexBedrooms}</p></div>
+                        )}
+                        {property.fieldData.annexBathrooms !== undefined && (
+                          <div><p className="text-xs text-gray-500">Annex Bathrooms</p><p className="font-medium">{property.fieldData.annexBathrooms}</p></div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-      {/* Gate & Fence Details */}
-      {(property.fieldData.hasGate !== undefined || property.fieldData.hasFence !== undefined) && (
-        <div className="mb-4 pt-3 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-            <Zap className="w-4 h-4" /> Boundary & Security
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {property.fieldData.hasGate !== undefined && (
-              <div><p className="text-xs text-gray-500">Has Gate</p><p className="font-medium">{property.fieldData.hasGate ? 'Yes' : 'No'}</p></div>
-            )}
-            {property.fieldData.gateType && (
-              <div><p className="text-xs text-gray-500">Gate Type</p><p className="font-medium">{property.fieldData.gateType}</p></div>
-            )}
-            {property.fieldData.gateMaterial && (
-              <div><p className="text-xs text-gray-500">Gate Material</p><p className="font-medium">{property.fieldData.gateMaterial}</p></div>
-            )}
-            {property.fieldData.hasFence !== undefined && (
-              <div><p className="text-xs text-gray-500">Has Fence</p><p className="font-medium">{property.fieldData.hasFence ? 'Yes' : 'No'}</p></div>
-            )}
-            {property.fieldData.fenceType && (
-              <div><p className="text-xs text-gray-500">Fence Type</p><p className="font-medium">{property.fieldData.fenceType}</p></div>
-            )}
-            {property.fieldData.fenceHeight && (
-              <div><p className="text-xs text-gray-500">Fence Height</p><p className="font-medium">{property.fieldData.fenceHeight} m</p></div>
-            )}
-          </div>
-        </div>
-      )}
+                  {/* Gate & Fence Details */}
+                  {(property.fieldData.hasGate !== undefined || property.fieldData.hasFence !== undefined) && (
+                    <div className="mb-4 pt-3 border-t border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <Zap className="w-4 h-4" /> Boundary & Security
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {property.fieldData.hasGate !== undefined && (
+                          <div><p className="text-xs text-gray-500">Has Gate</p><p className="font-medium">{property.fieldData.hasGate ? 'Yes' : 'No'}</p></div>
+                        )}
+                        {property.fieldData.gateType && (
+                          <div><p className="text-xs text-gray-500">Gate Type</p><p className="font-medium">{property.fieldData.gateType}</p></div>
+                        )}
+                        {property.fieldData.gateMaterial && (
+                          <div><p className="text-xs text-gray-500">Gate Material</p><p className="font-medium">{property.fieldData.gateMaterial}</p></div>
+                        )}
+                        {property.fieldData.hasFence !== undefined && (
+                          <div><p className="text-xs text-gray-500">Has Fence</p><p className="font-medium">{property.fieldData.hasFence ? 'Yes' : 'No'}</p></div>
+                        )}
+                        {property.fieldData.fenceType && (
+                          <div><p className="text-xs text-gray-500">Fence Type</p><p className="font-medium">{property.fieldData.fenceType}</p></div>
+                        )}
+                        {property.fieldData.fenceHeight && (
+                          <div><p className="text-xs text-gray-500">Fence Height</p><p className="font-medium">{property.fieldData.fenceHeight} m</p></div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-      {/* Nearby Amenities */}
-      {(property.fieldData.nearestSchoolKm || property.fieldData.nearestHospitalKm || property.fieldData.nearestTransportKm || property.fieldData.nearestMarketKm || property.fieldData.roadAccessType) && (
-        <div className="mb-4 pt-3 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-            <MapPin className="w-4 h-4" /> Nearby Amenities
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {property.fieldData.nearestSchoolKm && (
-              <div><p className="text-xs text-gray-500">Nearest School</p><p className="font-medium">{property.fieldData.nearestSchoolKm} km</p></div>
-            )}
-            {property.fieldData.nearestHospitalKm && (
-              <div><p className="text-xs text-gray-500">Nearest Hospital</p><p className="font-medium">{property.fieldData.nearestHospitalKm} km</p></div>
-            )}
-            {property.fieldData.nearestTransportKm && (
-              <div><p className="text-xs text-gray-500">Nearest Transport</p><p className="font-medium">{property.fieldData.nearestTransportKm} km</p></div>
-            )}
-            {property.fieldData.nearestMarketKm && (
-              <div><p className="text-xs text-gray-500">Nearest Market</p><p className="font-medium">{property.fieldData.nearestMarketKm} km</p></div>
-            )}
-            {property.fieldData.roadAccessType && (
-              <div><p className="text-xs text-gray-500">Road Access</p><p className="font-medium">{property.fieldData.roadAccessType}</p></div>
-            )}
-          </div>
-        </div>
-      )}
+                  {/* Nearby Amenities */}
+                  {(property.fieldData.nearestSchoolKm || property.fieldData.nearestHospitalKm || property.fieldData.nearestTransportKm || property.fieldData.nearestMarketKm || property.fieldData.roadAccessType) && (
+                    <div className="mb-4 pt-3 border-t border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" /> Nearby Amenities
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {property.fieldData.nearestSchoolKm && (
+                          <div><p className="text-xs text-gray-500">Nearest School</p><p className="font-medium">{property.fieldData.nearestSchoolKm} km</p></div>
+                        )}
+                        {property.fieldData.nearestHospitalKm && (
+                          <div><p className="text-xs text-gray-500">Nearest Hospital</p><p className="font-medium">{property.fieldData.nearestHospitalKm} km</p></div>
+                        )}
+                        {property.fieldData.nearestTransportKm && (
+                          <div><p className="text-xs text-gray-500">Nearest Transport</p><p className="font-medium">{property.fieldData.nearestTransportKm} km</p></div>
+                        )}
+                        {property.fieldData.nearestMarketKm && (
+                          <div><p className="text-xs text-gray-500">Nearest Market</p><p className="font-medium">{property.fieldData.nearestMarketKm} km</p></div>
+                        )}
+                        {property.fieldData.roadAccessType && (
+                          <div><p className="text-xs text-gray-500">Road Access</p><p className="font-medium">{property.fieldData.roadAccessType}</p></div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-      {/* GPS Coordinates */}
-      {(property.fieldData.latitude || property.fieldData.longitude) && (
-        <div className="mb-4 pt-3 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-            <Map className="w-4 h-4" /> GPS Coordinates
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {property.fieldData.latitude && (
-              <div><p className="text-xs text-gray-500">Latitude</p><p className="font-medium">{property.fieldData.latitude}</p></div>
-            )}
-            {property.fieldData.longitude && (
-              <div><p className="text-xs text-gray-500">Longitude</p><p className="font-medium">{property.fieldData.longitude}</p></div>
-            )}
-            {property.fieldData.gpsAccuracy && (
-              <div><p className="text-xs text-gray-500">GPS Accuracy</p><p className="font-medium">{property.fieldData.gpsAccuracy} m</p></div>
-            )}
-          </div>
-        </div>
-      )}
+                  {/* GPS Coordinates */}
+                  {(property.fieldData.latitude || property.fieldData.longitude) && (
+                    <div className="mb-4 pt-3 border-t border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <Map className="w-4 h-4" /> GPS Coordinates
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {property.fieldData.latitude && (
+                          <div><p className="text-xs text-gray-500">Latitude</p><p className="font-medium">{property.fieldData.latitude}</p></div>
+                        )}
+                        {property.fieldData.longitude && (
+                          <div><p className="text-xs text-gray-500">Longitude</p><p className="font-medium">{property.fieldData.longitude}</p></div>
+                        )}
+                        {property.fieldData.gpsAccuracy && (
+                          <div><p className="text-xs text-gray-500">GPS Accuracy</p><p className="font-medium">{property.fieldData.gpsAccuracy} m</p></div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-      {/* Utilities */}
-      {(property.fieldData.hasElectricity !== undefined || property.fieldData.hasWaterSupply !== undefined || property.fieldData.hasWaterTank !== undefined) && (
-        <div className="mb-4 pt-3 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-            <Zap className="w-4 h-4" /> Utilities
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {property.fieldData.hasElectricity !== undefined && (
-              <div><p className="text-xs text-gray-500">Electricity</p><p className="font-medium">{property.fieldData.hasElectricity ? 'Connected' : 'Not Connected'}</p></div>
-            )}
-            {property.fieldData.hasWaterSupply !== undefined && (
-              <div><p className="text-xs text-gray-500">Water Supply</p><p className="font-medium">{property.fieldData.hasWaterSupply ? 'Available' : 'Not Available'}</p></div>
-            )}
-            {property.fieldData.hasWaterTank !== undefined && (
-              <div><p className="text-xs text-gray-500">Water Tank</p><p className="font-medium">{property.fieldData.hasWaterTank ? 'Yes' : 'No'}</p></div>
-            )}
-          </div>
-        </div>
-      )}
+                  {/* Utilities */}
+                  {(property.fieldData.hasElectricity !== undefined || property.fieldData.hasWaterSupply !== undefined || property.fieldData.hasWaterTank !== undefined) && (
+                    <div className="mb-4 pt-3 border-t border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <Zap className="w-4 h-4" /> Utilities
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {property.fieldData.hasElectricity !== undefined && (
+                          <div><p className="text-xs text-gray-500">Electricity</p><p className="font-medium">{property.fieldData.hasElectricity ? 'Connected' : 'Not Connected'}</p></div>
+                        )}
+                        {property.fieldData.hasWaterSupply !== undefined && (
+                          <div><p className="text-xs text-gray-500">Water Supply</p><p className="font-medium">{property.fieldData.hasWaterSupply ? 'Available' : 'Not Available'}</p></div>
+                        )}
+                        {property.fieldData.hasWaterTank !== undefined && (
+                          <div><p className="text-xs text-gray-500">Water Tank</p><p className="font-medium">{property.fieldData.hasWaterTank ? 'Yes' : 'No'}</p></div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-      {/* Collector Notes */}
-      {property.fieldData.notes && (
-        <div className="pt-3 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-            <FileText className="w-4 h-4" /> Collector Notes
-          </h3>
-          <p className="text-sm text-gray-700">{property.fieldData.notes}</p>
-        </div>
-      )}
-    </div>
-  </div>
-)}
+                  {/* Collector Notes */}
+                  {property.fieldData.notes && (
+                    <div className="pt-3 border-t border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <FileText className="w-4 h-4" /> Collector Notes
+                      </h3>
+                      <p className="text-sm text-gray-700">{property.fieldData.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Valuation & Actions */}
@@ -529,10 +557,18 @@ export default function PropertyReviewPage() {
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center"><h2 className="text-xl font-semibold">Assign Data Collector</h2><button onClick={() => setShowAssignModal(false)}><XCircle className="w-5 h-5" /></button></div>
             <div className="p-6">
               <p className="text-sm text-gray-600 mb-4">Property: <strong>{property.ownerName} - {property.upiNumber}</strong></p>
-              <select value={selectedCollector} onChange={(e) => setSelectedCollector(e.target.value)} className="w-full px-3 py-2 border rounded-lg mb-4">
-                <option value="">Select a collector...</option>
-                {dataCollectors.filter((c: any) => c.isActive !== false).map((collector: any) => (<option key={collector.id} value={collector.id}>{collector.name} - {collector.email}</option>))}
-              </select>
+              <select 
+  value={selectedCollector} 
+  onChange={(e) => setSelectedCollector(e.target.value)} 
+  className="w-full px-3 py-2 border rounded-lg mb-4"
+>
+  <option value="">Select a collector...</option>
+  {dataCollectors.filter((c: any) => c.isActive !== false).map((collector: any) => (
+    <option key={collector.id} value={collector.email}>  {/* ✅ Use email as value */}
+      {collector.name} - {collector.email}
+    </option>
+  ))}
+</select>
               <div className="flex gap-3"><button onClick={() => setShowAssignModal(false)} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button><button onClick={handleAssign} disabled={actionLoading} className="flex-1 px-4 py-2 bg-[#1B3A5C] text-white rounded-lg">Assign</button></div>
             </div>
           </div>
