@@ -181,9 +181,8 @@ export default function PropertyDetailPage() {
       responseType: 'blob'
     });
     
-    // Get content type from response
-    const contentType = response.headers['content-type'];
-    const blob = new Blob([response.data], { type: contentType });
+    const contentType = response.headers['content-type'] as string | undefined;
+const blob = new Blob([response.data], { type: contentType });
     
     let fileExtension = '.pdf';
     let finalFileName = reportTitle.replace(/[^a-z0-9]/gi, '_');
