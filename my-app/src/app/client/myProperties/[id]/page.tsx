@@ -20,7 +20,10 @@ import {
   Trash2,
   Save,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Download,
+  Loader2,
+  FileDown
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -78,6 +81,15 @@ interface Property {
   soldAt?: string;
 }
 
+interface Report {
+  id: string;
+  title: string;
+  reportType?: string;
+  fileUrl?: string;
+  fileName?: string;
+  createdAt: string;
+}
+
 export default function PropertyDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -90,6 +102,12 @@ export default function PropertyDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [upiError, setUpiError] = useState('');
+  
+  // Report states
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [showAllReports, setShowAllReports] = useState(false);
 
   // Available options for cascading dropdowns
   const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
@@ -103,6 +121,7 @@ export default function PropertyDetailPage() {
       return;
     }
     fetchPropertyDetail(token);
+    fetchPropertyReports(token);
   }, [params.id]);
 
   const fetchPropertyDetail = async (token: string) => {
@@ -114,7 +133,6 @@ export default function PropertyDetailPage() {
       if (response.data.success) {
         setProperty(response.data.data);
         setEditForm(response.data.data);
-        // Initialize cascading dropdowns
         updateAvailableDistricts(response.data.data.province);
         updateAvailableSectors(response.data.data.district);
         updateAvailableCells(response.data.data.sector);
@@ -128,6 +146,91 @@ export default function PropertyDetailPage() {
       setLoading(false);
     }
   };
+
+  const fetchPropertyReports = async (token: string) => {
+    setLoadingReports(true);
+    try {
+      // Use the correct API path with /api/v1 prefix
+      const response = await api.get(`/report/property/${params.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('Reports response:', response.data);
+      
+      if (response.data.success) {
+        setReports(response.data.data || []);
+      } else {
+        setReports([]);
+      }
+    } catch (err: any) {
+      console.error('Error fetching reports:', err);
+      console.error('Status:', err.response?.status);
+      console.error('Message:', err.response?.data?.error);
+      setReports([]);
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
+ const handleDownloadReport = async (reportId: string, reportTitle: string, reportFileName?: string) => {
+  setDownloading(reportId);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await api.get(`/report/${reportId}/pdf`, {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob'
+    });
+    
+    // Get content type from response
+    const contentType = response.headers['content-type'];
+    const blob = new Blob([response.data], { type: contentType });
+    
+    let fileExtension = '.pdf';
+    let finalFileName = reportTitle.replace(/[^a-z0-9]/gi, '_');
+    
+    // If we have the original filename, preserve its extension
+    if (reportFileName) {
+      const lastDotIndex = reportFileName.lastIndexOf('.');
+      if (lastDotIndex !== -1) {
+        fileExtension = reportFileName.substring(lastDotIndex);
+      } else {
+        fileExtension = getExtensionFromMimeType(contentType);
+      }
+    } else {
+      fileExtension = getExtensionFromMimeType(contentType);
+    }
+    
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${finalFileName}${fileExtension}`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error downloading report:', error);
+    alert('Failed to download report. Please try again.');
+  } finally {
+    setDownloading(null);
+  }
+};
+
+const getExtensionFromMimeType = (mimeType: string): string => {
+  const mimeToExt: Record<string, string> = {
+    'application/pdf': '.pdf',
+    'application/msword': '.doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+    'application/vnd.ms-excel': '.xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/jpg': '.jpg',
+    'text/plain': '.txt'
+  };
+  
+  return mimeToExt[mimeType] || '.pdf';
+};
 
   // ========== CASCADING LOCATION UPDATE FUNCTIONS ==========
   const updateAvailableDistricts = (province: string) => {
@@ -146,9 +249,9 @@ export default function PropertyDetailPage() {
     setEditForm(prev => ({
       ...prev,
       province,
-      district: '',  // Reset district
-      sector: '',    // Reset sector
-      cell: ''       // Reset cell
+      district: '',
+      sector: '',
+      cell: ''
     }));
     updateAvailableDistricts(province);
     setAvailableSectors([]);
@@ -159,8 +262,8 @@ export default function PropertyDetailPage() {
     setEditForm(prev => ({
       ...prev,
       district,
-      sector: '',  // Reset sector
-      cell: ''     // Reset cell
+      sector: '',
+      cell: ''
     }));
     updateAvailableSectors(district);
     setAvailableCells([]);
@@ -170,7 +273,7 @@ export default function PropertyDetailPage() {
     setEditForm(prev => ({
       ...prev,
       sector,
-      cell: ''  // Reset cell
+      cell: ''
     }));
     updateAvailableCells(sector);
   };
@@ -181,11 +284,10 @@ export default function PropertyDetailPage() {
 
   // ========== UPI VALIDATION ==========
   const validateUpiNumber = async (upiNumber: string) => {
-    if (upiNumber === property?.upiNumber) return true; // Same UPI, no change
+    if (upiNumber === property?.upiNumber) return true;
     
     const token = localStorage.getItem('token');
     try {
-      // Check if UPI already exists
       const response = await api.get(`/myProperties?upiNumber=${upiNumber}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -216,7 +318,6 @@ export default function PropertyDetailPage() {
     setIsEditing(false);
     setEditForm(property!);
     setUpiError('');
-    // Reset cascading options
     updateAvailableDistricts(property!.province);
     updateAvailableSectors(property!.district);
     updateAvailableCells(property!.sector);
@@ -247,7 +348,6 @@ export default function PropertyDetailPage() {
   };
 
   const handleUpdate = async () => {
-    // Validate UPI before update
     if (editForm.upiNumber && editForm.upiNumber !== property?.upiNumber) {
       const isValid = await validateUpiNumber(editForm.upiNumber);
       if (!isValid) return;
@@ -265,7 +365,7 @@ export default function PropertyDetailPage() {
       if (response.data.success) {
         setProperty(response.data.data);
         setIsEditing(false);
-        alert('✅ Property updated successfully!');
+        alert(' Property updated successfully!');
       } else {
         alert(response.data.error || 'Failed to update property');
       }
@@ -289,7 +389,7 @@ export default function PropertyDetailPage() {
       });
 
       if (response.data.success) {
-        alert('✅ Property deleted successfully!');
+        alert(' Property deleted successfully!');
         router.push('/clientDashboard');
       } else {
         alert(response.data.error || 'Failed to delete property');
@@ -347,7 +447,7 @@ export default function PropertyDetailPage() {
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Property Not Found</h2>
           <p className="text-gray-600 mb-4">{error || 'The property you are looking for does not exist.'}</p>
-          <Link href="/client/dashboard" className="inline-flex items-center gap-2 px-4 py-2 bg-[#1B3A5C] text-white rounded-lg hover:bg-[#244d79]">
+          <Link href="/clientDashboard" className="inline-flex items-center gap-2 px-4 py-2 bg-[#1B3A5C] text-white rounded-lg hover:bg-[#244d79]">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
@@ -360,6 +460,7 @@ export default function PropertyDetailPage() {
   const isLocationChanged = editForm.province !== property.province || 
                             editForm.district !== property.district || 
                             editForm.sector !== property.sector;
+  const hasReports = reports.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -398,14 +499,119 @@ export default function PropertyDetailPage() {
           </div>
         )}
 
+        {/* Reports Modal */}
+        {showAllReports && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+              <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Property Reports</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {property.upiNumber} - {property.ownerName}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAllReports(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                {loadingReports ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#1B3A5C]" />
+                  </div>
+                ) : reports.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No reports available for this property yet.</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      Reports will appear here once the property valuation is complete.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {reports.map((report) => (
+                      <div key={report.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <FileText className="w-5 h-5 text-[#1B3A5C]" />
+                              <h3 className="font-semibold text-gray-900">{report.title}</h3>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                              Generated: {new Date(report.createdAt).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: 'long',
+                                year: 'numeric'
+                              })}
+                            </p>
+                            {report.fileName && (
+                              <p className="text-xs text-gray-400 mt-1">File: {report.fileName}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleDownloadReport(report.id, report.title)}
+                            disabled={downloading === report.id}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#1B3A5C] text-white rounded-lg hover:bg-[#2C5F8A] transition-colors disabled:opacity-50"
+                          >
+                            {downloading === report.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Downloading...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="w-4 h-4" />
+                                Download PDF
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-200 bg-gray-50">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-600">
+                    Total Reports: {reports.length}
+                  </p>
+                  <button
+                    onClick={() => setShowAllReports(false)}
+                    className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Navigation Buttons */}
         <div className="flex justify-between items-center mb-6">
-          <Link href="/client/dashboard" className="inline-flex items-center gap-2 text-[#1B3A5C] hover:text-[#244d79] font-medium">
+          <Link href="/client/myProperties" className="inline-flex items-center gap-2 text-[#1B3A5C] hover:text-[#244d79] font-medium">
             <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
+            Back to Properties
           </Link>
           
           <div className="flex gap-2">
+            {/* Download Report Button - Shows when property has reports */}
+            {hasReports && (
+              <button
+                onClick={() => setShowAllReports(true)}
+                className="flex items-center gap-2 px-4 py-2 text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors"
+              >
+                <FileDown className="w-4 h-4" />
+                Download Report ({reports.length})
+              </button>
+            )}
+            
             {!isEditing ? (
               <>
                 <button
@@ -444,6 +650,16 @@ export default function PropertyDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Report Availability Message */}
+        {!hasReports && (property.status === 'APPROVED' || property.status === 'PUBLISHED') && !loadingReports && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-yellow-600" />
+            <p className="text-sm text-yellow-800">
+              Report not available yet. Once the valuation is complete, you will be able to download your property report here.
+            </p>
+          </div>
+        )}
 
         {/* Warning when location changes */}
         {isEditing && isLocationChanged && (
@@ -500,8 +716,8 @@ export default function PropertyDetailPage() {
                  property.status === 'IN_FIELDWORK' ? 'A data collector is currently visiting your property.' :
                  property.status === 'UNDER_REVIEW' ? 'Your property assessment is under review by a supervisor.' :
                  property.status === 'NEEDS_REVISION' ? 'The data collector needs to update some information.' :
-                 property.status === 'APPROVED' ? 'Your property has been approved and will be published soon.' :
-                 property.status === 'PUBLISHED' ? 'Your property is now live on the platform!' :
+                 property.status === 'APPROVED' ? 'Your property has been approved. A report will be available soon.' :
+                 property.status === 'PUBLISHED' ? 'Your property is now live on the platform! You can download the valuation report.' :
                  property.status === 'SOLD' ? 'This property has been marked as sold.' :
                  'Status update pending'}
               </p>
@@ -512,7 +728,7 @@ export default function PropertyDetailPage() {
         {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* Location Information with Cascading Dropdowns */}
+            {/* Location Information */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
                 <div className="flex items-center gap-2">
@@ -522,7 +738,6 @@ export default function PropertyDetailPage() {
               </div>
               <div className="p-5">
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Country */}
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Country</p>
                     {isEditing ? (
@@ -531,8 +746,6 @@ export default function PropertyDetailPage() {
                       <p className="text-sm font-medium mt-1">{property.country}</p>
                     )}
                   </div>
-
-                  {/* Province - Cascading */}
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Province</p>
                     {isEditing ? (
@@ -549,8 +762,6 @@ export default function PropertyDetailPage() {
                       <p className="text-sm font-medium mt-1">{property.province}</p>
                     )}
                   </div>
-
-                  {/* District - Depends on Province */}
                   <div>
                     <p className="text-xs text-gray-500 uppercase">District</p>
                     {isEditing ? (
@@ -568,8 +779,6 @@ export default function PropertyDetailPage() {
                       <p className="text-sm font-medium mt-1">{property.district}</p>
                     )}
                   </div>
-
-                  {/* Sector - Depends on District */}
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Sector</p>
                     {isEditing ? (
@@ -587,8 +796,6 @@ export default function PropertyDetailPage() {
                       <p className="text-sm font-medium mt-1">{property.sector || 'N/A'}</p>
                     )}
                   </div>
-
-                  {/* Cell - Depends on Sector */}
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Cell</p>
                     {isEditing ? (
@@ -606,8 +813,6 @@ export default function PropertyDetailPage() {
                       <p className="text-sm font-medium mt-1">{property.cell || 'N/A'}</p>
                     )}
                   </div>
-
-                  {/* Village - Free text */}
                   <div>
                     <p className="text-xs text-gray-500 uppercase">Village</p>
                     {isEditing ? (
@@ -664,15 +869,13 @@ export default function PropertyDetailPage() {
                   {property.publishedAt && <div><p className="text-xs text-gray-500">Published</p><p className="text-sm font-medium">{formatDate(property.publishedAt)}</p></div>}
                   {property.soldAt && <div><p className="text-xs text-gray-500">Sold</p><p className="text-sm font-medium">{formatDate(property.soldAt)}</p></div>}
                 </div>
-                <Link href={`/myProperties/${property.id}/timeline`} className="inline-flex items-center gap-2 text-[#1B3A5C] hover:text-[#244d79] text-sm font-medium mt-4">
-                  View Full Timeline →
-                </Link>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Valuation */}
+          {/* Right Column - Valuation and Reports */}
           <div className="space-y-6">
+            {/* Valuation Card */}
             <div className="bg-gradient-to-br from-[#1B3A5C] to-[#244d79] rounded-xl shadow-lg overflow-hidden">
               <div className="p-5">
                 <div className="flex items-center gap-2 mb-4">
@@ -691,6 +894,65 @@ export default function PropertyDetailPage() {
                   </>
                 ) : (
                   <p className="text-white/80 text-sm">Valuation in progress. Once completed, AI estimate will appear here.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Reports Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#1B3A5C]" />
+                  <h2 className="font-semibold text-gray-900">Property Reports</h2>
+                </div>
+              </div>
+              <div className="p-5">
+                {loadingReports ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#1B3A5C]" />
+                  </div>
+                ) : hasReports ? (
+                  <div>
+                    <div className="space-y-3">
+                      {reports.slice(0, 3).map((report) => (
+                        <div key={report.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">{report.title}</p>
+                            <p className="text-xs text-gray-500">{formatDate(report.createdAt)}</p>
+                          </div>
+                          <button
+                            onClick={() => handleDownloadReport(report.id, report.title)}
+                            disabled={downloading === report.id}
+                            className="ml-2 p-2 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                          >
+                            {downloading === report.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {reports.length > 3 && (
+                      <button
+                        onClick={() => setShowAllReports(true)}
+                        className="mt-3 text-sm text-[#1B3A5C] hover:text-[#244d79] font-medium"
+                      >
+                        View all {reports.length} reports →
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <FileText className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No reports available yet</p>
+                    {property.status === 'APPROVED' || property.status === 'PUBLISHED' ? (
+                      <p className="text-xs text-gray-400 mt-1">Report will be available soon</p>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-1">Reports appear after property is approved</p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

@@ -22,13 +22,16 @@ import {
   Eye,
   AlertCircle,
   Loader2,
-  Camera
+  Camera,
+  ArrowRight,
+  PenTool,
+  ExternalLink
 } from 'lucide-react';
 import api from '@/lib/api';
 
 interface Assignment {
   id: string;
-  propertyId: string;  // Add propertyId field
+  propertyId: string;
   upiNumber: string;
   ownerName: string;
   phoneNumber: string;
@@ -51,7 +54,6 @@ export default function CollectorAssignmentsPage() {
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, href: '/collector/dashboard', current: false },
     { name: 'Assignments', icon: ClipboardList, href: '/collector/dashboard/assignments', current: true },
-    { name: 'Submissions', icon: FileText, href: '/collector/dashboard/submissions', current: false },
     { name: 'Settings', icon: Settings, href: '/collector/settings', current: false },
   ];
 
@@ -75,55 +77,51 @@ export default function CollectorAssignmentsPage() {
     fetchAssignments();
   }, []);
 
- const fetchAssignments = async () => {
-  setLoading(true);
-  setError(null);
-  try {
-    const token = localStorage.getItem('token');
-    const response = await api.get('/collector/dashboard/assignments', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    if (response.data.success) {
-      // The properties are in response.data.data.properties
-      const properties = response.data.data?.properties || [];
-      
-      const formattedData: Assignment[] = properties.map((item: any) => {
-        // Extract assignment ID from the nested assignment object
-        const assignmentId = item.assignment?.id;
-        const propertyId = item.id;
-        
-        return {
-          // ✅ Use assignment ID for navigation (this is what we need!)
-          id: assignmentId || propertyId,
-          propertyId: propertyId,
-          upiNumber: item.upiNumber,
-          ownerName: item.ownerName,
-          phoneNumber: item.phoneNumber,
-          district: item.district,
-          province: item.province,
-          status: item.status,
-          assignedAt: item.assignment?.assignedAt,
-          notes: item.assignment?.notes
-        };
+  const fetchAssignments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get('/collector/dashboard/assignments', {
+        headers: { Authorization: `Bearer ${token}` }
       });
       
-      setAssignments(formattedData);
-      
-      // Debug: Log what IDs are being used
-      console.log('Assignments with correct IDs:', formattedData.map(a => ({
-        navigationId: a.id,
-        propertyId: a.propertyId,
-        owner: a.ownerName
-      })));
+      if (response.data.success) {
+        const properties = response.data.data?.properties || [];
+        
+        const formattedData: Assignment[] = properties.map((item: any) => {
+          const assignmentId = item.assignment?.id;
+          const propertyId = item.id;
+          
+          return {
+            id: assignmentId || propertyId,
+            propertyId: propertyId,
+            upiNumber: item.upiNumber,
+            ownerName: item.ownerName,
+            phoneNumber: item.phoneNumber,
+            district: item.district,
+            province: item.province,
+            status: item.status,
+            assignedAt: item.assignment?.assignedAt,
+            notes: item.assignment?.notes
+          };
+        });
+        
+        setAssignments(formattedData);
+        
+        console.log('Assignments with correct IDs:', formattedData.map(a => ({
+          navigationId: a.id,
+          propertyId: a.propertyId,
+          owner: a.ownerName
+        })));
+      }
+    } catch (err: any) {
+      console.error('Error fetching assignments:', err);
+      setError(err.response?.data?.error || 'Failed to load assignments');
+    } finally {
+      setLoading(false);
     }
-  } catch (err: any) {
-    consoleError('Error fetching assignments:', err);
-    setError(err.response?.data?.error || 'Failed to load assignments');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -146,6 +144,19 @@ export default function CollectorAssignmentsPage() {
     assignment.district?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const getNavigationId = (assignment: Assignment) => {
+    if (assignment.id && assignment.id !== assignment.propertyId) {
+      return assignment.id;
+    }
+    return assignment.propertyId;
+  };
+
+  const handleAddFieldData = (assignment: any) => {
+    const propertyId = assignment.property?.id || assignment.propertyId || assignment.id;
+    localStorage.setItem('currentPropertyId', propertyId);
+    router.push('/collector/dashboard/field-data');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -153,23 +164,6 @@ export default function CollectorAssignmentsPage() {
       </div>
     );
   }
-
-  // Get the correct ID for navigation (prefer assignment ID, fallback to property ID)
-  const getNavigationId = (assignment: Assignment) => {
-    // If we have a valid assignment ID that's different from property ID, use it
-    if (assignment.id && assignment.id !== assignment.propertyId) {
-      return assignment.id;
-    }
-    // Otherwise use property ID (backup)
-    return assignment.propertyId;
-  };
-
-  const handleAddFieldData = (assignment: any) => {
-
-  const propertyId = assignment.property?.id || assignment.propertyId || assignment.id;
-  localStorage.setItem('currentPropertyId', propertyId);
-  router.push('/collector/dashboard/field-data');
-};
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -298,54 +292,57 @@ export default function CollectorAssignmentsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAssignments.map((assignment) => (
-                <div key={assignment.id} className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b border-gray-200">
-                    <p className="text-xs text-gray-500">UPI: {assignment.upiNumber}</p>
-                    <p className="text-sm font-semibold text-gray-900">{assignment.ownerName}</p>
+                <div key={assignment.id} className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                  <div className="bg-gradient-to-r from-[#1B3A5C] to-[#2C5F8A] px-4 py-3">
+                    <p className="text-xs text-blue-100">UPI: {assignment.upiNumber}</p>
+                    <p className="text-sm font-semibold text-white mt-1">{assignment.ownerName}</p>
                   </div>
                   
                   <div className="p-4">
-                    <div className="space-y-2">
+                    <div className="space-y-2 mb-4">
                       <div className="flex items-center gap-2 text-sm">
-                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <MapPin className="w-4 h-4 text-[#1B3A5C]" />
                         <span className="text-gray-600">{assignment.district}, {assignment.province}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <Phone className="w-4 h-4 text-gray-400" />
+                        <Phone className="w-4 h-4 text-[#1B3A5C]" />
                         <span className="text-gray-600">{assignment.phoneNumber}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <Calendar className="w-4 h-4 text-[#1B3A5C]" />
                         <span className="text-gray-500">Assigned: {formatDate(assignment.assignedAt)}</span>
                       </div>
                       {assignment.notes && (
-                        <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-600">
-                          <p className="font-medium text-gray-700">Notes:</p>
-                          <p className="line-clamp-2">{assignment.notes}</p>
+                        <div className="mt-3 p-2 bg-blue-50 rounded-lg text-sm text-gray-600 border border-blue-100">
+                          <p className="font-medium text-[#1B3A5C] text-xs mb-1">Notes:</p>
+                          <p className="line-clamp-2 text-gray-600">{assignment.notes}</p>
                         </div>
                       )}
                     </div>
                   </div>
                   
-                  {/* Footer - View Details Button */}
+                  {/* Side-by-Side Buttons */}
                   <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-  <div className="flex gap-2">
-    <Link
-      href={`/collector/dashboard/assignments/${getNavigationId(assignment)}`}
-      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#1B3A5C] text-white rounded-lg hover:bg-[#2C5F8A] transition-colors text-sm font-medium"
-    >
-      <Eye className="w-4 h-4" />
-      View Details
-    </Link>
-    <button
-      onClick={() => handleAddFieldData(assignment)}
-      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-    >
-      <Camera className="w-4 h-4" />
-      Add Field Data
-    </button>
-  </div>
-</div>
+                    <div className="flex gap-2">
+                      {/* View Details Button */}
+                      <Link
+                        href={`/collector/dashboard/assignments/${getNavigationId(assignment)}`}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 text-sm font-medium"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View
+                      </Link>
+                      
+                      {/* Add Field Data Button */}
+                      <button
+                        onClick={() => handleAddFieldData(assignment)}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#1B3A5C] text-white rounded-lg hover:bg-[#2C5F8A] transition-all duration-200 text-sm font-medium shadow-sm"
+                      >
+                        <PenTool className="w-4 h-4" />
+                        Add Data
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

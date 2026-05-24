@@ -8,9 +8,10 @@ import {
   Building2,
   Clock,
   CheckCircle,
-  TrendingUp,
+  RefreshCw, 
   UserPlus,
   Home,
+  TrendingUp,
   Eye,
   Calendar,
   Activity,
@@ -144,7 +145,6 @@ export default function AdminDashboard() {
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, href: '/admin/dashboard', current: true },
     { name: 'Manage Users', icon: Users, href: '/admin/dashboard/manage-users', current: false },
-    { name: 'Analytics', icon: BarChart3, href: '/admin/analytics', current: false },
     { name: 'Settings', icon: Settings, href: '/admin/settings', current: false },
   ];
 
@@ -315,7 +315,7 @@ export default function AdminDashboard() {
                 className="p-2 text-gray-400 hover:text-[#1B3A5C] transition-colors"
                 title="Refresh"
               >
-                <TrendingUp className="w-5 h-5" />
+                <RefreshCw className="w-5 h-5" />
               </button>
 
               <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
@@ -339,46 +339,52 @@ export default function AdminDashboard() {
 
         <div className="p-6">
         
-         {/* Stats Cards Row - Only 3 cards */}
+ {/* Stats Cards Row - Only 3 cards */}
 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
   {/* Total Users Card */}
-  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-500">Total Users</p>
-        <p className="text-3xl font-bold text-gray-900">{adminStats?.totalUsers || 0}</p>
-        <p className="text-xs text-gray-500 mt-1">All registered users</p>
-      </div>
-      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-        <Users className="w-6 h-6 text-blue-600" />
+  <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-blue-500 border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500">Total Users</p>
+          <p className="text-3xl font-bold text-gray-900">{adminStats?.totalUsers || 0}</p>
+          <p className="text-xs text-gray-500 mt-1">All registered users</p>
+        </div>
+        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+          <Users className="w-6 h-6 text-blue-600" />
+        </div>
       </div>
     </div>
   </div>
   
   {/* Active Users Card */}
-  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-500">Active Users</p>
-        <p className="text-3xl font-bold text-green-600">{userStatus?.activity.active || 0}</p>
-        <p className="text-xs text-gray-500 mt-1">Currently active accounts</p>
-      </div>
-      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-        <CheckCircle className="w-6 h-6 text-green-600" />
+  <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-green-500 border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500">Active Users</p>
+          <p className="text-3xl font-bold text-green-600">{userStatus?.activity.active || 0}</p>
+          <p className="text-xs text-gray-500 mt-1">Currently active accounts</p>
+        </div>
+        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+          <CheckCircle className="w-6 h-6 text-green-600" />
+        </div>
       </div>
     </div>
   </div>
   
   {/* Inactive Users Card */}
-  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-500">Inactive Users</p>
-        <p className="text-3xl font-bold text-red-600">{userStatus?.activity.inactive || 0}</p>
-        <p className="text-xs text-gray-500 mt-1">Disabled or suspended accounts</p>
-      </div>
-      <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-        <Clock className="w-6 h-6 text-red-600" />
+  <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-red-500 border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500">Inactive Users</p>
+          <p className="text-3xl font-bold text-red-600">{userStatus?.activity.inactive || 0}</p>
+          <p className="text-xs text-gray-500 mt-1">Disabled or suspended accounts</p>
+        </div>
+        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+          <Clock className="w-6 h-6 text-red-600" />
+        </div>
       </div>
     </div>
   </div>
@@ -394,45 +400,79 @@ export default function AdminDashboard() {
           {/* Charts Row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Users by Role - Pie Chart */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Users by Role</h3>
-                <PieChart className="w-5 h-5 text-gray-400" />
-              </div>
-              <div className="h-80 min-h-[320px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RePieChart>
-                    <Pie
-                      data={usersByRole?.data || []}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={false}
-                    >
-                      {(usersByRole?.data || []).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value, name, props) => [`${value} users (${props.payload.percentage}%)`, name]} />
-                    <Legend />
-                  </RePieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  {(usersByRole?.data || []).map((role, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <span className="text-lg">{role.icon}</span>
-                      <span className="text-gray-600">{role.name}:</span>
-                      <span className="font-semibold">{role.value} ({role.percentage}%)</span>
-                    </div>
-                  ))}
-                </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+  <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+    <div className="flex items-center justify-between">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900">Users by Role</h3>
+        <p className="text-sm text-gray-500 mt-0.5">Distribution across all roles</p>
+      </div>
+      <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+        <PieChart className="w-5 h-5 text-blue-600" />
+      </div>
+    </div>
+  </div>
+  
+  <div className="p-6">
+    <div className="h-80 min-h-[320px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <RePieChart>
+          <Pie
+            data={usersByRole?.data || []}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={100}
+            paddingAngle={5}
+            dataKey="value"
+            label={false}
+          >
+            {(usersByRole?.data || []).map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip 
+            formatter={(value, name, props) => [`${value} users (${props.payload.percentage}%)`, name]}
+            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+          />
+          <Legend 
+            verticalAlign="bottom" 
+            height={36}
+            iconType="circle"
+            formatter={(value, entry, index) => (
+              <span className="text-sm text-gray-600">{value}</span>
+            )}
+          />
+        </RePieChart>
+      </ResponsiveContainer>
+    </div>
+    
+    <div className="mt-6 pt-6 border-t border-gray-100">
+      <div className="grid grid-cols-2 gap-3">
+        {(usersByRole?.data || []).map((role, idx) => (
+          <div 
+            key={idx} 
+            className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xl">{role.icon}</span>
+              <div>
+                <p className="text-sm font-medium text-gray-900">{role.name}</p>
+                <p className="text-xs text-gray-500">{role.description || `${role.percentage}% of total`}</p>
               </div>
             </div>
+            <div className="text-right">
+              <p className="text-lg font-bold text-gray-900">{role.value}</p>
+              <p className="text-xs font-medium" style={{ color: role.color || COLORS[idx % COLORS.length] }}>
+                {role.percentage}%
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</div>
  {/* User Growth Trend - Area Chart */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
               <div className="flex items-center justify-between mb-4">
@@ -471,99 +511,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Charts Row 2 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-           
-
-            {/* User Status Distribution - Donut Chart */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">User Status</h3>
-                <Activity className="w-5 h-5 text-gray-400" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {/* Active/Inactive Donut */}
-                <div className="text-center">
-                  <div className="h-40">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RePieChart>
-                        <Pie
-                          data={[
-                            { name: 'Active', value: userStatus?.activity.active || 0, color: '#10B981' },
-                            { name: 'Inactive', value: userStatus?.activity.inactive || 0, color: '#EF4444' }
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={30}
-                          outerRadius={50}
-                          dataKey="value"
-                          label={false}
-                        >
-                          <Cell fill="#10B981" />
-                          <Cell fill="#EF4444" />
-                        </Pie>
-                        <Tooltip />
-                      </RePieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <p className="text-sm font-medium mt-2">Active: {userStatus?.activity.activePercentage || 0}%</p>
-                  <p className="text-xs text-gray-500">Active vs Inactive</p>
-                </div>
-                
-                {/* Verified/Unverified Donut */}
-                <div className="text-center">
-                  <div className="h-40">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RePieChart>
-                        <Pie
-                          data={[
-                            { name: 'Verified', value: userStatus?.verification.verified || 0, color: '#8B5CF6' },
-                            { name: 'Unverified', value: userStatus?.verification.unverified || 0, color: '#F59E0B' }
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={30}
-                          outerRadius={50}
-                          dataKey="value"
-                          label={false}
-                        >
-                          <Cell fill="#8B5CF6" />
-                          <Cell fill="#F59E0B" />
-                        </Pie>
-                        <Tooltip />
-                      </RePieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <p className="text-sm font-medium mt-2">Verified: {userStatus?.verification.verifiedPercentage || 0}%</p>
-                  <p className="text-xs text-gray-500">Email Verified</p>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-gray-600">Active:</span>
-                    <span className="font-semibold">{userStatus?.activity.active || 0}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                    <span className="text-gray-600">Verified:</span>
-                    <span className="font-semibold">{userStatus?.verification.verified || 0}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-gray-600">Inactive:</span>
-                    <span className="font-semibold">{userStatus?.activity.inactive || 0}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="text-gray-600">Unverified:</span>
-                    <span className="font-semibold">{userStatus?.verification.unverified || 0}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        
 
           {/* Recent Users Table */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

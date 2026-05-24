@@ -1,38 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Home,
   LayoutDashboard,
-  Building2,
   Users,
   PlusCircle,
-  FileText,
   Settings,
-  HelpCircle,
   LogOut,
   ChevronRight,
   Bell,
-  TrendingUp,
-  Clock,
-  CheckCircle,
   Menu,
   X,
   RefreshCw,
   Edit,
   Trash2,
   Search,
-  Filter,
   UserCheck,
   UserX,
-  Shield,
-  Phone,
   Calendar,
   AlertCircle,
-  Mail,
-  ArrowLeft
+  Power,
+  PowerOff
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -62,6 +53,7 @@ export default function UsersManagementPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
 
   // Menu items for sidebar
   const menuItems = [
@@ -99,8 +91,29 @@ export default function UsersManagementPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      console.log('Fetch users response:', response.data);
+      
+      let usersData = [];
+      
+      // Handle different response structures
       if (response.data.success) {
-        setUsers(response.data.data.users || response.data.data || []);
+        // Check various possible data structures
+        if (response.data.data && Array.isArray(response.data.data)) {
+          usersData = response.data.data;
+        } else if (response.data.data && response.data.data.users && Array.isArray(response.data.data.users)) {
+          usersData = response.data.data.users;
+        } else if (response.data.data && response.data.data.data && Array.isArray(response.data.data.data)) {
+          usersData = response.data.data.data;
+        } else if (Array.isArray(response.data.data)) {
+          usersData = response.data.data;
+        } else if (Array.isArray(response.data.users)) {
+          usersData = response.data.users;
+        } else {
+          usersData = [];
+        }
+        
+        setUsers(usersData);
+        console.log('Set users:', usersData.length, 'users');
       } else {
         setError(response.data.error || 'Failed to fetch users');
       }
@@ -109,6 +122,48 @@ export default function UsersManagementPage() {
       setError(err.response?.data?.error || 'Failed to load users');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleUserStatus = async (userToToggle: User) => {
+    setTogglingStatus(userToToggle.id);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Try the working endpoint from your dashboard
+      const response = await api.put(
+        `/admin/dashboard/manage-users/${userToToggle.id}/toggle-status`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      console.log('Toggle status response:', response.data);
+      
+      if (response.data.success) {
+        // Update local state immediately
+        const updatedUsers = users.map(u => 
+          u.id === userToToggle.id 
+            ? { ...u, isActive: !u.isActive }
+            : u
+        );
+        setUsers(updatedUsers);
+        
+        // Show success message
+        const newStatus = !userToToggle.isActive;
+        alert(`User ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+      } else {
+        setError(response.data.error || 'Failed to update user status');
+        alert(response.data.error || 'Failed to update user status');
+      }
+    } catch (err: any) {
+      console.error('Error toggling user status:', err);
+      const errorMsg = err.response?.data?.error || 'Error updating user status';
+      setError(errorMsg);
+      alert(errorMsg);
+    } finally {
+      setTogglingStatus(null);
     }
   };
 
@@ -132,7 +187,12 @@ export default function UsersManagementPage() {
       });
       
       if (response.data.success) {
-        await fetchUsers();
+        // Update the user in local state
+        const updatedUsers = users.map(u => 
+          u.id === selectedUser.id ? selectedUser : u
+        );
+        setUsers(updatedUsers);
+        
         setShowEditModal(false);
         setSelectedUser(null);
         alert('User updated successfully! Email notification sent.');
@@ -159,7 +219,10 @@ export default function UsersManagementPage() {
       });
       
       if (response.data.success) {
-        await fetchUsers();
+        // Remove the user from local state
+        const updatedUsers = users.filter(u => u.id !== selectedUser.id);
+        setUsers(updatedUsers);
+        
         setShowDeleteModal(false);
         setSelectedUser(null);
         alert(response.data.message || 'User deleted successfully');
@@ -179,6 +242,11 @@ export default function UsersManagementPage() {
     localStorage.removeItem('user');
     router.push('/login');
   };
+
+  // Calculate stats based on current users array
+  const totalUsers = users.length;
+  const activeUsers = users.filter(u => u.isActive).length;
+  const inactiveUsers = users.filter(u => !u.isActive).length;
 
   // Filter users
   const filteredUsers = users.filter(user => {
@@ -201,12 +269,6 @@ export default function UsersManagementPage() {
       case 'DATA_COLLECTOR': return 'bg-green-100 text-green-800';
       default: return 'bg-blue-100 text-blue-800';
     }
-  };
-
-  const getStatusBadgeClass = (isActive: boolean) => {
-    return isActive 
-      ? 'bg-green-100 text-green-800' 
-      : 'bg-red-100 text-red-800';
   };
 
   const formatDate = (dateString: string) => {
@@ -299,7 +361,7 @@ export default function UsersManagementPage() {
 
       {/* Main Content */}
       <main className="lg:ml-72 min-h-screen">
-        {/* Top Header with Profile */}
+        {/* Top Header */}
         <header className="bg-white shadow-sm sticky top-0 z-30">
           <div className="flex justify-between items-center px-6 py-4">
             <h2 className="text-xl font-semibold text-gray-800 hidden lg:block">
@@ -307,8 +369,6 @@ export default function UsersManagementPage() {
             </h2>
             
             <div className="flex items-center gap-4 ml-auto">
-              
-              {/* Refresh Button */}
               <button
                 onClick={fetchUsers}
                 className="p-2 text-gray-400 hover:text-[#1B3A5C] transition-colors"
@@ -317,13 +377,11 @@ export default function UsersManagementPage() {
                 <RefreshCw className="w-5 h-5" />
               </button>
               
-              {/* Notifications */}
               <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
             
-              {/* User Profile */}
               <div className="flex items-center gap-3 border-l border-gray-200 pl-4">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-medium text-gray-900">{user?.name || 'Admin'}</p>
@@ -338,47 +396,66 @@ export default function UsersManagementPage() {
         </header>
 
         <div className="p-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{users.length}</p>
-                </div>
-                <Users className="w-8 h-8 text-blue-500 opacity-50" />
-              </div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Active Users</p>
-                  <p className="text-2xl font-bold text-green-600">{users.filter(u => u.isActive).length}</p>
-                </div>
-                <UserCheck className="w-8 h-8 text-green-500 opacity-50" />
-              </div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Inactive Users</p>
-                  <p className="text-2xl font-bold text-red-600">{users.filter(u => !u.isActive).length}</p>
-                </div>
-                <UserX className="w-8 h-8 text-red-500 opacity-50" />
-              </div>
-            </div>
-          
-          </div>
-
-            <div className="flex justify-start mb-4">
-    <button
-      onClick={() => router.push('/admin/dashboard/invitations')}
-      className="flex items-center gap-2 px-4 py-2 bg-[#1B3A5C] text-white rounded-lg hover:bg-[#244d79] transition-colors shadow-sm"
-    >
-      <PlusCircle className="w-4 h-4" />
-      Send User Invitation
-    </button>
+          {/* Stats Cards - Real-time counts */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+  {/* Total Users Card */}
+  <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-blue-500 border border-gray-100 hover:shadow-md transition-all duration-200">
+    <div className="p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-500">Total Users</p>
+          <p className="text-3xl font-bold text-gray-900 mt-1">{totalUsers}</p>
+          <p className="text-xs text-gray-400 mt-1">All registered accounts</p>
+        </div>
+        <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+          <Users className="w-6 h-6 text-blue-500" />
+        </div>
+      </div>
+    </div>
   </div>
+  
+  {/* Active Users Card */}
+  <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-green-500 border border-gray-100 hover:shadow-md transition-all duration-200">
+    <div className="p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-500">Active Users</p>
+          <p className="text-3xl font-bold text-green-600 mt-1">{activeUsers}</p>
+          <p className="text-xs text-gray-400 mt-1">Currently active accounts</p>
+        </div>
+        <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+          <UserCheck className="w-6 h-6 text-green-500" />
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  {/* Inactive Users Card */}
+  <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-red-500 border border-gray-100 hover:shadow-md transition-all duration-200">
+    <div className="p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-500">Inactive Users</p>
+          <p className="text-3xl font-bold text-red-600 mt-1">{inactiveUsers}</p>
+          <p className="text-xs text-gray-400 mt-1">Disabled or suspended</p>
+        </div>
+        <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center">
+          <UserX className="w-6 h-6 text-red-500" />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+          <div className="flex justify-start mb-4">
+            <button
+              onClick={() => router.push('/admin/dashboard/invitations')}
+              className="flex items-center gap-2 px-4 py-2 bg-[#1B3A5C] text-white rounded-lg hover:bg-[#244d79] transition-colors shadow-sm"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Send User Invitation
+            </button>
+          </div>
 
           {/* Filters */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
@@ -412,8 +489,8 @@ export default function UsersManagementPage() {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B3A5C] focus:border-[#1B3A5C] outline-none"
               >
                 <option value="ALL">All Status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
+                <option value="ACTIVE">Active Only</option>
+                <option value="INACTIVE">Inactive Only</option>
               </select>
             </div>
           </div>
@@ -445,7 +522,7 @@ export default function UsersManagementPage() {
                 <tbody className="divide-y divide-gray-200">
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                         No users found
                       </td>
                     </tr>
@@ -454,12 +531,19 @@ export default function UsersManagementPage() {
                       <tr key={userItem.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-[#1B3A5C] to-[#2C5F8A] rounded-full flex items-center justify-center text-white font-semibold">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                              userItem.isActive 
+                                ? 'bg-gradient-to-br from-[#1B3A5C] to-[#2C5F8A]'
+                                : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                            }`}>
                               {userItem.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
                               <p className="text-sm font-medium text-gray-900">{userItem.name}</p>
                               <p className="text-xs text-gray-500">{userItem.email}</p>
+                              {userItem.phone && (
+                                <p className="text-xs text-gray-400 mt-0.5">{userItem.phone}</p>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -469,19 +553,46 @@ export default function UsersManagementPage() {
                             {userItem.role.replace('_', ' ')}
                           </span>
                         </td>
+                        
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(userItem.isActive)}`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${
+                            userItem.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${userItem.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
                             {userItem.isActive ? 'Active' : 'Inactive'}
                           </span>
                         </td>
+                        
                         <td className="px-6 py-4 text-sm text-gray-500">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
                             {formatDate(userItem.createdAt)}
                           </div>
                         </td>
+                        
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
+                            {/* Activate/Deactivate Button */}
+                            <button
+                              onClick={() => handleToggleUserStatus(userItem)}
+                              disabled={togglingStatus === userItem.id}
+                              className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${
+                                userItem.isActive 
+                                  ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
+                                  : 'bg-green-50 text-green-600 hover:bg-green-100'
+                              }`}
+                              title={userItem.isActive ? 'Deactivate User' : 'Activate User'}
+                            >
+                              {togglingStatus === userItem.id ? (
+                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                              ) : userItem.isActive ? (
+                                <PowerOff className="w-4 h-4" />
+                              ) : (
+                                <Power className="w-4 h-4" />
+                              )}
+                            </button>
+                            
+                            {/* Edit Button */}
                             <button
                               onClick={() => {
                                 setSelectedUser(userItem);
@@ -492,6 +603,8 @@ export default function UsersManagementPage() {
                             >
                               <Edit className="w-4 h-4" />
                             </button>
+                            
+                            {/* Delete Button */}
                             <button
                               onClick={() => {
                                 setSelectedUser(userItem);
@@ -517,10 +630,14 @@ export default function UsersManagementPage() {
             </div>
             
             {/* Summary */}
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
               <p className="text-sm text-gray-600">
                 Showing {filteredUsers.length} of {users.length} users
               </p>
+              <div className="flex gap-3 text-sm">
+                <span className="text-green-600">✓ Active: {activeUsers}</span>
+                <span className="text-red-600">✗ Inactive: {inactiveUsers}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -662,14 +779,6 @@ export default function UsersManagementPage() {
               <p className="text-sm text-gray-500 mb-4">
                 Email: {selectedUser.email}
               </p>
-              
-              {selectedUser.role === 'ADMIN' && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-yellow-800">
-                    ⚠️ This is an admin user. Deleting admins may affect system management.
-                  </p>
-                </div>
-              )}
               
               <div className="flex gap-3 mt-6">
                 <button
