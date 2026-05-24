@@ -78,7 +78,6 @@ export default function AssignmentDetailPage() {
 
   const fetchAssignmentDetail = async (token: string) => {
     try {
-      // ✅ Use the correct endpoint - the assignment ID is in the URL params
       const response = await api.get(`/collector/dashboard/assignments/${params.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -136,8 +135,9 @@ export default function AssignmentDetailPage() {
     });
   };
 
+  // FIXED: Changed JSX.Element to React.ReactNode
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, { bg: string; text: string; icon: JSX.Element }> = {
+    const badges: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
       'ASSIGNED': { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: <Clock className="w-4 h-4" /> },
       'IN_FIELDWORK': { bg: 'bg-blue-100', text: 'text-blue-800', icon: <Navigation className="w-4 h-4" /> },
       'UNDER_REVIEW': { bg: 'bg-purple-100', text: 'text-purple-800', icon: <AlertCircle className="w-4 h-4" /> },
@@ -256,7 +256,7 @@ export default function AssignmentDetailPage() {
                   <div><p className="text-xs text-gray-500 uppercase">District</p><p className="text-sm font-medium mt-1">{property.district}</p></div>
                   <div><p className="text-xs text-gray-500 uppercase">Sector</p><p className="text-sm font-medium mt-1">{property.sector || 'N/A'}</p></div>
                   <div><p className="text-xs text-gray-500 uppercase">Cell</p><p className="text-sm font-medium mt-1">{property.cell || 'N/A'}</p></div>
-                  <div><p className="text-xs text-gray-500 uppercase">Village</p><p className="text-sm font-medium mt-1">{property.village || 'N/A'}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-gray-500 uppercase">Village</p><p className="text-sm font-medium mt-1">{property.village || 'N/A'}</p></div>
                 </div>
               </div>
             </div>
