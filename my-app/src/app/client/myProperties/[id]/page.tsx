@@ -334,6 +334,7 @@ export default function PropertyDetailPage() {
     }
   };
 
+  // FIXED: Removed the parameter since we're using params.id directly
   const handleDelete = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -418,7 +419,7 @@ export default function PropertyDetailPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-5xl mx-auto px-4">
 
-        {/* Delete Confirmation Modal */}
+        {/* Delete Confirmation Modal - FIXED: Removed parameter from onClick */}
         {deleteConfirm && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 max-w-md mx-4">
@@ -433,8 +434,18 @@ export default function PropertyDetailPage() {
               </p>
               <p className="text-gray-500 text-sm mb-6">This action cannot be undone.</p>
               <div className="flex gap-3 justify-end">
-                <button onClick={() => setDeleteConfirm(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200" disabled={deleting}>Cancel</button>
-                <button onClick={handleDelete} disabled={deleting} className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50">
+                <button 
+                  onClick={() => setDeleteConfirm(false)} 
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200" 
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleDelete}  // FIXED: Removed the parameter
+                  disabled={deleting} 
+                  className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
                   {deleting ? 'Deleting...' : 'Yes, Delete'}
                 </button>
               </div>
