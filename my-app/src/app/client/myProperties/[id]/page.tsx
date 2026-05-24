@@ -183,21 +183,21 @@ export default function PropertyDetailPage() {
     
     const contentType = response.headers['content-type'] as string | undefined;
 const blob = new Blob([response.data], { type: contentType });
-    
-    let fileExtension = '.pdf';
-    let finalFileName = reportTitle.replace(/[^a-z0-9]/gi, '_');
-    
-    // If we have the original filename, preserve its extension
-    if (reportFileName) {
-      const lastDotIndex = reportFileName.lastIndexOf('.');
-      if (lastDotIndex !== -1) {
-        fileExtension = reportFileName.substring(lastDotIndex);
-      } else {
-        fileExtension = getExtensionFromMimeType(contentType);
-      }
-    } else {
-      fileExtension = getExtensionFromMimeType(contentType);
-    }
+
+let fileExtension = '.pdf';
+let finalFileName = reportTitle.replace(/[^a-z0-9]/gi, '_');
+
+if (contentType) {
+  const reportFileName = response.headers['content-disposition'];
+  if (reportFileName && reportFileName.includes('.')) {
+    const lastDotIndex = reportFileName.lastIndexOf('.');
+    fileExtension = reportFileName.substring(lastDotIndex);
+  } else {
+    fileExtension = getExtensionFromMimeType(contentType ?? 'application/pdf');
+  }
+} else {
+  fileExtension = getExtensionFromMimeType(contentType ?? 'application/pdf');
+}
     
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
