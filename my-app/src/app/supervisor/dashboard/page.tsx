@@ -227,71 +227,71 @@ export default function SupervisorDashboard() {
     setPropertyTypes(data);
   };
 
-const calculateValuationTrends = (properties: any[]) => {
-  // Initialize monthly data from April to current month
-  const monthlyData: { [key: string]: { count: number; totalValue: number; order: number } } = {};
-  
-  // Get current date
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0-11
-  
-  // Month names
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
-  // Determine starting point: April of current year or last year
-  let startYear = currentYear;
-  let startMonth = 3; // April is month index 3
-  
-  // If current month is before April, start from April of last year
-  if (currentMonth < 3) {
-    startYear = currentYear - 1;
-  }
-  
-  // Initialize all months from start to current month
-  let year = startYear;
-  let month = startMonth;
-  let order = 0;
-  
-  while (year < currentYear || (year === currentYear && month <= currentMonth)) {
-    const monthKey = `${monthNames[month]} ${year}`;
-    monthlyData[monthKey] = { count: 0, totalValue: 0, order: order };
-    order++;
-    month++;
-    if (month > 11) {
-      month = 0;
-      year++;
+  const calculateValuationTrends = (properties: any[]) => {
+    // Initialize monthly data from April to current month
+    const monthlyData: { [key: string]: { count: number; totalValue: number; order: number } } = {};
+    
+    // Get current date
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-11
+    
+    // Month names
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    // Determine starting point: April of current year or last year
+    let startYear = currentYear;
+    let startMonth = 3; // April is month index 3
+    
+    // If current month is before April, start from April of last year
+    if (currentMonth < 3) {
+      startYear = currentYear - 1;
     }
-  }
-  
-  // Populate with actual property data
-  properties.forEach(property => {
-    if (property.createdAt && property.aiValuation && property.aiValuation > 0) {
-      const date = new Date(property.createdAt);
-      const monthName = date.toLocaleString('default', { month: 'short' });
-      const year = date.getFullYear();
-      const monthKey = `${monthName} ${year}`;
-      
-      if (monthlyData[monthKey]) {
-        monthlyData[monthKey].count++;
-        monthlyData[monthKey].totalValue += property.aiValuation;
+    
+    // Initialize all months from start to current month
+    let year = startYear;
+    let month = startMonth;
+    let order = 0;
+    
+    while (year < currentYear || (year === currentYear && month <= currentMonth)) {
+      const monthKey = `${monthNames[month]} ${year}`;
+      monthlyData[monthKey] = { count: 0, totalValue: 0, order: order };
+      order++;
+      month++;
+      if (month > 11) {
+        month = 0;
+        year++;
       }
     }
-  });
-  
-  // Convert to array for chart, sorted by order
-  const trends = Object.entries(monthlyData)
-    .sort((a, b) => a[1].order - b[1].order)
-    .map(([month, data]) => ({
-      month,
-      count: data.count,
-      averageValue: data.count > 0 ? Math.round(data.totalValue / data.count) : 0
-    }));
-  
-  console.log('Valuation trends:', trends); // Debug log to see what's being generated
-  
-  setValuationTrends(trends);
-};
+    
+    // Populate with actual property data
+    properties.forEach(property => {
+      if (property.createdAt && property.aiValuation && property.aiValuation > 0) {
+        const date = new Date(property.createdAt);
+        const monthName = date.toLocaleString('default', { month: 'short' });
+        const year = date.getFullYear();
+        const monthKey = `${monthName} ${year}`;
+        
+        if (monthlyData[monthKey]) {
+          monthlyData[monthKey].count++;
+          monthlyData[monthKey].totalValue += property.aiValuation;
+        }
+      }
+    });
+    
+    // Convert to array for chart, sorted by order
+    const trends = Object.entries(monthlyData)
+      .sort((a, b) => a[1].order - b[1].order)
+      .map(([month, data]) => ({
+        month,
+        count: data.count,
+        averageValue: data.count > 0 ? Math.round(data.totalValue / data.count) : 0
+      }));
+    
+    console.log('Valuation trends:', trends); // Debug log to see what's being generated
+    
+    setValuationTrends(trends);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -498,7 +498,6 @@ const calculateValuationTrends = (properties: any[]) => {
             </div>
           </div>
 
-
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Property Valuations Over Time */}
@@ -543,7 +542,7 @@ const calculateValuationTrends = (properties: any[]) => {
               </div>
             </div>
 
-            {/* Property Types Distribution */}
+            {/* Property Types Distribution - FIXED */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
               <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
                 <div className="flex items-center justify-between">
@@ -569,7 +568,13 @@ const calculateValuationTrends = (properties: any[]) => {
                           outerRadius={100}
                           paddingAngle={5}
                           dataKey="value"
-                          label={({ name, percent }) => percent > 0 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''}
+                          // FIXED: Added null check for percent
+                          label={({ name, percent }) => {
+                            if (percent && percent > 0) {
+                              return `${name}: ${(percent * 100).toFixed(0)}%`;
+                            }
+                            return '';
+                          }}
                         >
                           {propertyTypes.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
@@ -589,7 +594,6 @@ const calculateValuationTrends = (properties: any[]) => {
               </div>
             </div>
           </div>
-
         </div>
       </main>
     </div>
