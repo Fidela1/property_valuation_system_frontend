@@ -102,7 +102,32 @@ export default function MyPropertiesPage() {
     }
   };
 
-  
+  // ADD THIS handleDelete FUNCTION
+  const handleDelete = async (propertyId: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    setDeleting(true);
+    try {
+      const response = await api.delete(`/client/myProperties/${propertyId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        alert('Property deleted successfully!');
+        // Refresh the properties list
+        await fetchProperties(token);
+        setDeleteConfirm(null);
+      } else {
+        alert(response.data.error || 'Failed to delete property');
+      }
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string } } };
+      alert(e.response?.data?.error || 'Failed to delete property');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const option = statusOptions.find(opt => opt.value === status);
@@ -122,6 +147,17 @@ export default function MyPropertiesPage() {
       year: 'numeric'
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#1B3A5C] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your properties...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -217,7 +253,109 @@ export default function MyPropertiesPage() {
         </div>
 
         {/* Properties Table */}
-        
+        {properties.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No properties found</h3>
+            <p className="text-gray-500 mb-4">
+              {searchTerm || statusFilter !== 'ALL' 
+                ? "Try adjusting your search or filter criteria" 
+                : "You haven't added any properties yet"}
+            </p>
+            <Link
+              href="/createProperty"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#1B3A5C] text-white rounded-lg hover:bg-[#244d79]"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Add Your First Property
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">UPI Number</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Owner Name</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {properties.map((property) => (
+                      <tr key={property.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-medium text-gray-900">{property.upiNumber}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-900">{property.ownerName}</p>
+                          <p className="text-xs text-gray-500">{property.phoneNumber}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600">{property.district}, {property.province}</p>
+                          <p className="text-xs text-gray-400">{property.sector}, {property.cell}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          {getStatusBadge(property.status)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600">{formatDate(property.createdAt)}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            <Link
+                              href={`/client/myProperties/${property.id}`}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Link>
+                            <button
+                              onClick={() => setDeleteConfirm(property.id)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete Property"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center mt-6">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
