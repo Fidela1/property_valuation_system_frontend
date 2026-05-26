@@ -1,0 +1,77 @@
+⚠ Prerendering is running in debug mode with NODE_ENV='development'. This will affect performance and should not be used for production.
+⚠ Invalid next.config.ts options detected: 
+⚠     Unrecognized key(s) in object: 'missingSuspenseWithCSRBailout' at "experimental"
+⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+▲ Next.js 16.2.4 (Turbopack)
+- Environments: .env
+- Experiments (use with caution):
+  ✓ allowDevelopmentBuild (enabled by `--debug-prerender`)
+  ? missingSuspenseWithCSRBailout (invalid experimental key)
+  ⨯ prerenderEarlyExit (disabled by `--debug-prerender`)
+  ✓ serverSourceMaps (enabled by `--debug-prerender`)
+  ⨯ turbopackMinify (disabled by `--debug-prerender`)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 58s
+  Running TypeScript ...
+  Finished TypeScript in 34.6s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/21) ...
+  Generating static pages using 3 workers (5/21) 
+⨯ useSearchParams() should be wrapped in a suspense boundary at page "/invitation/accept". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at useDynamicSearchParams (D:\Projects\property_valuation_system_frontend\my-app\.next\server\chunks\ssr\node_modules_next_0w2y7fz._.js:1798:45)
+    at useSearchParams (D:\Projects\property_valuation_system_frontend\my-app\.next\server\chunks\ssr\node_modules_next_0w2y7fz._.js:2584:29)
+    at AcceptInvitationPage (D:\Projects\property_valuation_system_frontend\my-app\.next\server\chunks\ssr\[root-of-the-server]__0o9er~z._.js:606:88)
+    at Object.react_stack_bottom_frame (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:311311)
+    at renderWithHooks (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:118339)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:133011)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at finishFunctionComponent (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:119349)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:134520)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:194974)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:213093)
+    at renderChildrenArray (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:207654)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:202417)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:182673)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:193338)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at finishFunctionComponent (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:119349)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:134520)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:213093)
+    at renderChildrenArray (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:207654)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:202417)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:132462)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at finishFunctionComponent (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:119349)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:134520)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:182673)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at finishFunctionComponent (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:119349)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:134520)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:182673)
+    at retryNode (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201940)
+    at renderNodeDestructive (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:201175)
+    at finishFunctionComponent (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:119349)
+    at renderElement (D:\Projects\property_valuation_system_frontend\my-app\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js:2:134520)
+Error occurred prerendering page "/invitation/accept". Read more: https://nextjs.org/docs/messages/prerender-error
+  Generating static pages using 3 workers (10/21) 
+  Generating static pages using 3 workers (15/21) 
+
+> Export encountered errors on 1 path:
+	/invitation/accept/page: /invitation/accept

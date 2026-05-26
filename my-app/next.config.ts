@@ -1,7 +1,7 @@
-const nextConfig = {
-  turbopack: {
-    root: __dirname, // This tells Turbopack to use my-app as the root
-  },
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  
 };
 
-module.exports = nextConfig;
+export default nextConfig;
