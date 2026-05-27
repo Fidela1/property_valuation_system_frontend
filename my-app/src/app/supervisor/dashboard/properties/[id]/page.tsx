@@ -80,6 +80,7 @@ interface Property {
   images?: Array<{ id: string; url: string; isFeatured: boolean; order: number }>;
 }
 
+export const dynamic = 'force-dynamic';
 export default function PropertyReviewPage() {
   const params = useParams();
   const router = useRouter();
