@@ -96,22 +96,45 @@ export default function PropertyReviewPage() {
   const [dataCollectors, setDataCollectors] = useState<any[]>([]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { router.push('/login'); return; }
-    fetchProperty();
-    fetchDataCollectors();
-  }, [params.id]);
+  if (!params?.id) return;
+
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    router.push('/login');
+    return;
+  }
+
+  fetchProperty();
+  fetchDataCollectors();
+}, [params]);
 
   const fetchProperty = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await api.get(`/supervisor/dashboard/properties/${params.id}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (response.data.success) setProperty(response.data.data);
-      else setError(response.data.error || 'Property not found');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load property');
-    } finally { setLoading(false); }
-  };
+  if (!params?.id) return;
+
+  try {
+    const token = localStorage.getItem('token');
+
+    const response = await api.get(
+      `/supervisor/dashboard/properties/${String(params.id)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.data.success) {
+      setProperty(response.data.data);
+    } else {
+      setError(response.data.error || 'Property not found');
+    }
+  } catch (err: any) {
+    setError(err.response?.data?.error || 'Failed to load property');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchDataCollectors = async () => {
     try {
