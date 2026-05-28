@@ -81,6 +81,8 @@ interface Property {
 }
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function PropertyReviewPage() {
   const params = useParams();
   const router = useRouter();
