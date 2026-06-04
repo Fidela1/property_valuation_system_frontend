@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   ArrowLeft, MapPin, Navigation, Loader2, AlertCircle, TrendingUp, 
   DollarSign, Home, Car, Trees, Fence, Shield, School, Hospital, 
-  Bus, ShoppingBag, Camera, Upload, X 
+  Bus, ShoppingBag, Camera, Upload, X, Star, Sparkles
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -61,7 +61,25 @@ export default function FieldDataPage() {
     nearestMarketKm: '',
     roadAccessType: 'PAVED',
     valuationAmount: '',
-    notes: ''
+    notes: '',
+    // ===== PREMIUM FEATURES =====
+    hasSwimmingPool: false,
+    hasGym: false,
+    hasSmartHome: false,
+    hasSolarPanels: false,
+    hasBackupGenerator: false,
+    hasSecuritySystem: false,
+    hasLandscapedGarden: false,
+    hasModernKitchen: false,
+    hasAirConditioning: false,
+    hasFireplace: false,
+    hasBalcony: false,
+    hasGarage: false,
+    hasStaffQuarters: false,
+    hasStorageRoom: false,
+    hasWaterHeater: false,
+    hasIntercom: false,
+    viewType: 'None',
   });
 
   // Get propertyId from localStorage when page loads
@@ -74,6 +92,7 @@ export default function FieldDataPage() {
     }
     setLoading(false);
   }, []);
+  
   useEffect(() => {
     if (propertyId) {
       getCurrentLocation();
@@ -109,6 +128,24 @@ export default function FieldDataPage() {
     formData.nearestTransportKm,
     formData.nearestMarketKm,
     formData.roadAccessType,
+    // Premium features triggers
+    formData.hasSwimmingPool,
+    formData.hasGym,
+    formData.hasSmartHome,
+    formData.hasSolarPanels,
+    formData.hasBackupGenerator,
+    formData.hasSecuritySystem,
+    formData.hasLandscapedGarden,
+    formData.hasModernKitchen,
+    formData.hasAirConditioning,
+    formData.hasFireplace,
+    formData.hasBalcony,
+    formData.hasGarage,
+    formData.hasStaffQuarters,
+    formData.hasStorageRoom,
+    formData.hasWaterHeater,
+    formData.hasIntercom,
+    formData.viewType,
     propertyId
   ]);
 
@@ -184,77 +221,135 @@ export default function FieldDataPage() {
   };
 
   const calculateLiveValuation = async () => {
-    setValuationLoading(true);
+  setValuationLoading(true);
+  
+  try {
+    let propertyType = 'STANDARD';
+    const buildingSizeNum = parseFloat(formData.buildingSize) || 0;
+    const bedroomsNum = parseInt(formData.bedrooms) || 0;
     
-    try {
-      let propertyType = 'STANDARD';
-      const buildingSizeNum = parseFloat(formData.buildingSize) || 0;
-      const bedroomsNum = parseInt(formData.bedrooms) || 0;
-      
-      if (buildingSizeNum > 500 || bedroomsNum > 5 || formData.propertyType === 'VILLA') {
-        propertyType = 'LUXURY';
-      } else if (buildingSizeNum < 100 || bedroomsNum <= 2) {
-        propertyType = 'BASIC';
-      }
-      
-      let propertyCategory = 'RESIDENTIAL';
-      if (formData.propertyType === 'COMMERCIAL') propertyCategory = 'COMMERCIAL';
-      else if (formData.propertyType === 'LAND') propertyCategory = 'LAND';
-      
-      let floorMaterial = 'Cement';
-      if (formData.gardenType === 'Luxury') floorMaterial = 'Marble';
-      else if (formData.gardenType === 'Medium') floorMaterial = 'Tiles';
-      else if (formData.gardenType === 'Large') floorMaterial = 'Wood';
-      
-      let roofType = 'Iron sheets';
-      if (propertyType === 'LUXURY') roofType = 'Concrete';
-      else if (propertyType === 'STANDARD') roofType = 'Tiles';
-      
-      const payload = {
-        landSize: parseFloat(formData.landSize) || 0,
-        buildingSize: parseFloat(formData.buildingSize) || 0,
-        yearBuilt: parseInt(formData.yearBuilt) || 2000,
-        propertyType: propertyType,
-        propertyCategory: propertyCategory,
-        bedrooms: parseInt(formData.bedrooms) || 2,
-        bathrooms: parseFloat(formData.bathrooms) || 1,
-        gardenSize: parseFloat(formData.gardenSize) || 0,
-        fenceHeight: parseFloat(formData.fenceHeight) || 0,
-        gateType: formData.gateType ? formData.gateType.toUpperCase() : null,
-        parkingSpaces: parseInt(formData.parkingSpaces) || 0,
-        hasElectricity: true,
-        hasWaterSupply: true,
-        hasWaterTank: false,
-        floodRisk: false,
-        landSlope: "Flat",
-        floorMaterial: floorMaterial,
-        roofType: roofType,
-        district: "Gasabo",
-        nearestSchoolKm: parseFloat(formData.nearestSchoolKm) || 2,
-        nearestHospitalKm: parseFloat(formData.nearestHospitalKm) || 3,
-        nearestTransportKm: parseFloat(formData.nearestTransportKm) || 1,
-        nearestMarketKm: parseFloat(formData.nearestMarketKm) || 1.5,
-        roadAccessType: formData.roadAccessType || "PAVED"
-      };
-      
-      const response = await api.post('/valuation/live', payload);
-      
-      if (response.data.success) {
-        setLiveValuation(response.data.data);
-        
-        if (!formData.valuationAmount && response.data.data.estimatedValue) {
-          setFormData(prev => ({
-            ...prev,
-            valuationAmount: response.data.data.estimatedValue.toString()
-          }));
-        }
-      }
-    } catch (err) {
-      console.error('Live valuation error:', err);
-    } finally {
-      setValuationLoading(false);
+    if (buildingSizeNum > 500 || bedroomsNum > 5 || formData.propertyType === 'VILLA') {
+      propertyType = 'LUXURY';
+    } else if (buildingSizeNum < 100 || bedroomsNum <= 2) {
+      propertyType = 'BASIC';
     }
-  };
+    
+    let propertyCategory = 'RESIDENTIAL';
+    if (formData.propertyType === 'COMMERCIAL') propertyCategory = 'COMMERCIAL';
+    else if (formData.propertyType === 'LAND') propertyCategory = 'LAND';
+    
+    let floorMaterial = 'Cement';
+    if (formData.gardenType === 'Luxury') floorMaterial = 'Marble';
+    else if (formData.gardenType === 'Medium') floorMaterial = 'Tiles';
+    else if (formData.gardenType === 'Large') floorMaterial = 'Wood';
+    
+    let roofType = 'Iron sheets';
+    if (propertyType === 'LUXURY') roofType = 'Concrete';
+    else if (propertyType === 'STANDARD') roofType = 'Tiles';
+    
+    // Calculate garden value
+    const gardenSizeNum = parseFloat(formData.gardenSize) || 0;
+    const gardenValue = gardenSizeNum * 5000; // 5000 RWF per m²
+    
+    // Calculate annex value
+    let annexValue = 0;
+    if (formData.hasAnnex) {
+      const annexSizeNum = parseFloat(formData.annexSize) || 0;
+      const annexBedroomsNum = parseInt(formData.annexBedrooms) || 0;
+      const annexBathroomsNum = parseFloat(formData.annexBathrooms) || 0;
+      annexValue = (annexSizeNum * 100000) + (annexBedroomsNum * 1500000) + (annexBathroomsNum * 800000);
+    }
+    
+    // Calculate fence value
+    const fenceHeightNum = parseFloat(formData.fenceHeight) || 0;
+    const fenceValue = fenceHeightNum * 15000;
+    
+    // Calculate gate value
+    let gateValue = 0;
+    if (formData.hasGate && formData.gateType) {
+      const gateTypeUpper = formData.gateType.toUpperCase();
+      if (gateTypeUpper === 'AUTOMATIC') gateValue = 1500000;
+      else if (gateTypeUpper === 'SLIDING') gateValue = 800000;
+      else if (gateTypeUpper === 'SWING') gateValue = 400000;
+      else if (gateTypeUpper === 'MANUAL') gateValue = 200000;
+    }
+    
+    // Calculate parking value
+    const parkingSpacesNum = parseInt(formData.parkingSpaces) || 0;
+    const parkingValue = parkingSpacesNum * 500000;
+    
+    const payload = {
+      landSize: parseFloat(formData.landSize) || 0,
+      buildingSize: parseFloat(formData.buildingSize) || 0,
+      yearBuilt: parseInt(formData.yearBuilt) || 2000,
+      propertyType: propertyType,
+      propertyCategory: propertyCategory,
+      bedrooms: parseInt(formData.bedrooms) || 2,
+      bathrooms: parseFloat(formData.bathrooms) || 1,
+      gardenSize: gardenSizeNum,
+      fenceHeight: fenceHeightNum,
+      gateType: formData.gateType ? formData.gateType.toUpperCase() : null,
+      parkingSpaces: parkingSpacesNum,
+      hasElectricity: true,
+      hasWaterSupply: true,
+      hasWaterTank: false,
+      floodRisk: false,
+      landSlope: "Flat",
+      floorMaterial: floorMaterial,
+      roofType: roofType,
+      district: "Gasabo",
+      nearestSchoolKm: parseFloat(formData.nearestSchoolKm) || 2,
+      nearestHospitalKm: parseFloat(formData.nearestHospitalKm) || 3,
+      nearestTransportKm: parseFloat(formData.nearestTransportKm) || 1,
+      nearestMarketKm: parseFloat(formData.nearestMarketKm) || 1.5,
+      roadAccessType: formData.roadAccessType || "PAVED",
+      // ===== PREMIUM FEATURES =====
+      hasSwimmingPool: formData.hasSwimmingPool,
+      hasGym: formData.hasGym,
+      hasSmartHome: formData.hasSmartHome,
+      hasSolarPanels: formData.hasSolarPanels,
+      hasBackupGenerator: formData.hasBackupGenerator,
+      hasSecuritySystem: formData.hasSecuritySystem,
+      hasLandscapedGarden: formData.hasLandscapedGarden,
+      hasModernKitchen: formData.hasModernKitchen,
+      hasAirConditioning: formData.hasAirConditioning,
+      hasFireplace: formData.hasFireplace,
+      hasBalcony: formData.hasBalcony,
+      hasGarage: formData.hasGarage,
+      hasStaffQuarters: formData.hasStaffQuarters,
+      hasStorageRoom: formData.hasStorageRoom,
+      hasWaterHeater: formData.hasWaterHeater,
+      hasIntercom: formData.hasIntercom,
+      viewType: formData.viewType,
+      condition: formData.condition,
+      // Additional values for debugging
+      gardenValue: gardenValue,
+      annexValue: annexValue,
+      fenceValue: fenceValue,
+      gateValue: gateValue,
+      parkingValue: parkingValue
+    };
+    
+    console.log('Valuation payload with garden/annex:', payload);
+    
+    const response = await api.post('/valuation/live', payload);
+    
+    if (response.data.success) {
+      setLiveValuation(response.data.data);
+      
+      if (!formData.valuationAmount && response.data.data.estimatedValue) {
+        setFormData(prev => ({
+          ...prev,
+          valuationAmount: response.data.data.estimatedValue.toString()
+        }));
+      }
+    }
+  } catch (err) {
+    console.error('Live valuation error:', err);
+  } finally {
+    setValuationLoading(false);
+  }
+};
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -266,147 +361,170 @@ export default function FieldDataPage() {
     }));
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  console.log('=== FORM SUBMISSION START ===');
-  console.log('Property ID:', propertyId);
-  console.log('Uploaded images count:', uploadedImages.length);
-  
-  if (!propertyId) {
-    alert('Property ID not found. Please go back and try again.');
-    return;
-  }
-  
-  if (!formData.latitude || !formData.longitude) {
-    alert('Please capture GPS location before submitting');
-    return;
-  }
-  
-  if (uploadedImages.length === 0) {
-    alert('Please upload at least one property image');
-    return;
-  }
-  
-  setSubmitting(true);
-  setUploadingImages(true);
-  
-  try {
-    const token = localStorage.getItem('token');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    // STEP 1: Upload images - Use the correct endpoint with property ID
-    const uploadedImageUrls = [];
+    console.log('=== FORM SUBMISSION START ===');
+    console.log('Property ID:', propertyId);
+    console.log('Uploaded images count:', uploadedImages.length);
     
-    for (let i = 0; i < uploadedImages.length; i++) {
-      const image = uploadedImages[i];
-      const imageFormData = new FormData();
-      imageFormData.append('images', image);
+    if (!propertyId) {
+      alert('Property ID not found. Please go back and try again.');
+      return;
+    }
+    
+    if (!formData.latitude || !formData.longitude) {
+      alert('Please capture GPS location before submitting');
+      return;
+    }
+    
+    if (uploadedImages.length === 0) {
+      alert('Please upload at least one property image');
+      return;
+    }
+    
+    setSubmitting(true);
+    setUploadingImages(true);
+    
+    try {
+      const token = localStorage.getItem('token');
       
-      // ✅ FIX: Use the correct endpoint with property ID
-      const uploadUrl = `/upload/properties/${propertyId}/images`;
-      console.log(`Uploading image ${i + 1} to:`, uploadUrl);
+      const uploadedImageUrls = [];
       
-      const uploadResponse = await api.post(uploadUrl, imageFormData, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
+      for (let i = 0; i < uploadedImages.length; i++) {
+        const image = uploadedImages[i];
+        const imageFormData = new FormData();
+        imageFormData.append('images', image);
+        
+        const uploadUrl = `/upload/properties/${propertyId}/images`;
+        console.log(`Uploading image ${i + 1} to:`, uploadUrl);
+        
+        const uploadResponse = await api.post(uploadUrl, imageFormData, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        
+        console.log('Upload response:', uploadResponse.data);
+        
+        if (uploadResponse.data.success) {
+          if (uploadResponse.data.data?.images && Array.isArray(uploadResponse.data.data.images)) {
+            for (const img of uploadResponse.data.data.images) {
+              uploadedImageUrls.push({
+                url: img.url,
+                publicId: img.publicId
+              });
+              console.log(`Image URL from backend:`, img.url);
+            }
+          } 
+          else if (uploadResponse.data.data?.url) {
+            uploadedImageUrls.push({
+              url: uploadResponse.data.data.url,
+              publicId: uploadResponse.data.data.publicId
+            });
+            console.log(`Image URL from backend:`, uploadResponse.data.data.url);
+          }
+          else {
+            console.error('No image URL in response:', uploadResponse.data);
+          }
+        } else {
+          console.error('Upload failed:', uploadResponse.data.error);
         }
+      }
+      
+      console.log('All uploaded image URLs:', uploadedImageUrls);
+      
+      if (uploadedImageUrls.length === 0) {
+        throw new Error('No images were successfully uploaded');
+      }
+      
+      const fieldDataPayload = {
+        propertyId: propertyId,
+        latitude: parseFloat(String(formData.latitude)),
+        longitude: parseFloat(String(formData.longitude)),
+        gpsAccuracy: formData.gpsAccuracy ? parseFloat(String(formData.gpsAccuracy)) : null,
+        propertyType: formData.propertyType,
+        condition: formData.condition,
+        bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : null,
+        bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : null,
+        landSize: formData.landSize ? parseFloat(formData.landSize) : null,
+        buildingSize: formData.buildingSize ? parseFloat(formData.buildingSize) : null,
+        yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : null,
+        parkingSpaces: formData.parkingSpaces ? parseInt(formData.parkingSpaces) : null,
+        hasGarden: formData.hasGarden,
+        gardenSize: formData.gardenSize ? parseFloat(formData.gardenSize) : null,
+        gardenType: formData.gardenType,
+        hasAnnex: formData.hasAnnex,
+        annexType: formData.annexType,
+        annexSize: formData.annexSize ? parseFloat(formData.annexSize) : null,
+        annexBedrooms: formData.annexBedrooms ? parseInt(formData.annexBedrooms) : null,
+        annexBathrooms: formData.annexBathrooms ? parseFloat(formData.annexBathrooms) : null,
+        hasGate: formData.hasGate,
+        gateType: formData.gateType,
+        gateMaterial: formData.gateMaterial,
+        hasFence: formData.hasFence,
+        fenceType: formData.fenceType,
+        fenceHeight: formData.fenceHeight ? parseFloat(formData.fenceHeight) : null,
+        nearestSchoolKm: formData.nearestSchoolKm ? parseFloat(formData.nearestSchoolKm) : null,
+        nearestHospitalKm: formData.nearestHospitalKm ? parseFloat(formData.nearestHospitalKm) : null,
+        nearestTransportKm: formData.nearestTransportKm ? parseFloat(formData.nearestTransportKm) : null,
+        nearestMarketKm: formData.nearestMarketKm ? parseFloat(formData.nearestMarketKm) : null,
+        roadAccessType: formData.roadAccessType,
+        valuationAmount: formData.valuationAmount ? parseFloat(formData.valuationAmount) : null,
+        notes: formData.notes,
+        // ===== PREMIUM FEATURES =====
+        hasSwimmingPool: formData.hasSwimmingPool,
+        hasGym: formData.hasGym,
+        hasSmartHome: formData.hasSmartHome,
+        hasSolarPanels: formData.hasSolarPanels,
+        hasBackupGenerator: formData.hasBackupGenerator,
+        hasSecuritySystem: formData.hasSecuritySystem,
+        hasLandscapedGarden: formData.hasLandscapedGarden,
+        hasModernKitchen: formData.hasModernKitchen,
+        hasAirConditioning: formData.hasAirConditioning,
+        hasFireplace: formData.hasFireplace,
+        hasBalcony: formData.hasBalcony,
+        hasGarage: formData.hasGarage,
+        hasStaffQuarters: formData.hasStaffQuarters,
+        hasStorageRoom: formData.hasStorageRoom,
+        hasWaterHeater: formData.hasWaterHeater,
+        hasIntercom: formData.hasIntercom,
+        viewType: formData.viewType,
+        images: uploadedImageUrls
+      };
+      
+      console.log('Submitting field data payload:', JSON.stringify(fieldDataPayload, null, 2));
+      
+      const response = await api.post('/collector/dashboard/field-data', fieldDataPayload, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('Upload response:', uploadResponse.data);
-      
-      // ✅ FIX: Handle the response correctly
-      if (uploadResponse.data.success) {
-        // Check if images array is returned
-        if (uploadResponse.data.data?.images && Array.isArray(uploadResponse.data.data.images)) {
-          for (const img of uploadResponse.data.data.images) {
-            uploadedImageUrls.push({
-              url: img.url,
-              publicId: img.publicId
-            });
-            console.log(`Image URL from backend:`, img.url);
-          }
-        } 
-        // Check if single image is returned
-        else if (uploadResponse.data.data?.url) {
-          uploadedImageUrls.push({
-            url: uploadResponse.data.data.url,
-            publicId: uploadResponse.data.data.publicId
-          });
-          console.log(`Image URL from backend:`, uploadResponse.data.data.url);
-        }
-        else {
-          console.error('No image URL in response:', uploadResponse.data);
-        }
+      if (response.data.success) {
+        alert('Field data submitted successfully!');
+        router.push('/collector/dashboard');
       } else {
-        console.error('Upload failed:', uploadResponse.data.error);
+        alert(response.data.error || 'Failed to submit field data');
       }
+    } catch (err: any) {
+      console.error('Submit error:', err);
+      alert(err.response?.data?.error || err.message || 'Failed to submit field data');
+    } finally {
+      setSubmitting(false);
+      setUploadingImages(false);
     }
-    
-    console.log('All uploaded image URLs:', uploadedImageUrls);
-    
-    if (uploadedImageUrls.length === 0) {
-      throw new Error('No images were successfully uploaded');
-    }
-    
-    // STEP 2: Submit field data
-    const fieldDataPayload = {
-      propertyId: propertyId,
-      latitude: parseFloat(String(formData.latitude)),
-      longitude: parseFloat(String(formData.longitude)),
-      gpsAccuracy: formData.gpsAccuracy ? parseFloat(String(formData.gpsAccuracy)) : null,
-      propertyType: formData.propertyType,
-      condition: formData.condition,
-      bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : null,
-      bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : null,
-      landSize: formData.landSize ? parseFloat(formData.landSize) : null,
-      buildingSize: formData.buildingSize ? parseFloat(formData.buildingSize) : null,
-      yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : null,
-      parkingSpaces: formData.parkingSpaces ? parseInt(formData.parkingSpaces) : null,
-      hasGarden: formData.hasGarden,
-      gardenSize: formData.gardenSize ? parseFloat(formData.gardenSize) : null,
-      gardenType: formData.gardenType,
-      hasAnnex: formData.hasAnnex,
-      annexType: formData.annexType,
-      annexSize: formData.annexSize ? parseFloat(formData.annexSize) : null,
-      annexBedrooms: formData.annexBedrooms ? parseInt(formData.annexBedrooms) : null,
-      annexBathrooms: formData.annexBathrooms ? parseFloat(formData.annexBathrooms) : null,
-      hasGate: formData.hasGate,
-      gateType: formData.gateType,
-      gateMaterial: formData.gateMaterial,
-      hasFence: formData.hasFence,
-      fenceType: formData.fenceType,
-      fenceHeight: formData.fenceHeight ? parseFloat(formData.fenceHeight) : null,
-      nearestSchoolKm: formData.nearestSchoolKm ? parseFloat(formData.nearestSchoolKm) : null,
-      nearestHospitalKm: formData.nearestHospitalKm ? parseFloat(formData.nearestHospitalKm) : null,
-      nearestTransportKm: formData.nearestTransportKm ? parseFloat(formData.nearestTransportKm) : null,
-      nearestMarketKm: formData.nearestMarketKm ? parseFloat(formData.nearestMarketKm) : null,
-      roadAccessType: formData.roadAccessType,
-      valuationAmount: formData.valuationAmount ? parseFloat(formData.valuationAmount) : null,
-      notes: formData.notes,
-      images: uploadedImageUrls
-    };
-    
-    console.log('Submitting field data payload:', JSON.stringify(fieldDataPayload, null, 2));
-    
-    const response = await api.post('/collector/dashboard/field-data', fieldDataPayload, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    if (response.data.success) {
-      alert('Field data submitted successfully!');
-      router.push('/collector/dashboard');
-    } else {
-      alert(response.data.error || 'Failed to submit field data');
-    }
-  } catch (err: any) {
-    console.error('Submit error:', err);
-    alert(err.response?.data?.error || err.message || 'Failed to submit field data');
-  } finally {
-    setSubmitting(false);
-    setUploadingImages(false);
-  }
-};
+  };
+
+  // Count premium features for display
+  const premiumCount = [
+    formData.hasSwimmingPool, formData.hasGym, formData.hasSmartHome,
+    formData.hasSolarPanels, formData.hasBackupGenerator, formData.hasSecuritySystem,
+    formData.hasLandscapedGarden, formData.hasModernKitchen, formData.hasAirConditioning,
+    formData.hasFireplace, formData.hasBalcony, formData.hasGarage,
+    formData.hasStaffQuarters, formData.hasStorageRoom, formData.hasWaterHeater,
+    formData.hasIntercom
+  ].filter(Boolean).length;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -539,6 +657,87 @@ export default function FieldDataPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Parking Spaces</label>
                     <input name="parkingSpaces" type="number" value={formData.parkingSpaces} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg" placeholder="Parking spaces" />
                   </div>
+                </div>
+              </div>
+
+              {/* ===== PREMIUM FEATURES SECTION - ADD THIS ===== */}
+              <div className="border-2 border-purple-200 bg-purple-50 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Star className="w-5 h-5 text-purple-600" />
+                    <h2 className="font-semibold text-gray-900">Premium Features & Amenities</h2>
+                    {premiumCount > 0 && (
+                      <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                        {premiumCount} selected
+                      </span>
+                    )}
+                  </div>
+                  {premiumCount > 0 && (
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasSwimmingPool" checked={formData.hasSwimmingPool} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">🏊 Swimming Pool</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasGym" checked={formData.hasGym} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">💪 Home Gym</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasSmartHome" checked={formData.hasSmartHome} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">🏠 Smart Home</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasSolarPanels" checked={formData.hasSolarPanels} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">☀️ Solar Panels</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasBackupGenerator" checked={formData.hasBackupGenerator} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">⚡ Backup Generator</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasSecuritySystem" checked={formData.hasSecuritySystem} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">🔒 Security System</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasLandscapedGarden" checked={formData.hasLandscapedGarden} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">🌳 Landscaped Garden</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasModernKitchen" checked={formData.hasModernKitchen} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">🍳 Modern Kitchen</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasAirConditioning" checked={formData.hasAirConditioning} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">❄️ Air Conditioning</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasFireplace" checked={formData.hasFireplace} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">🔥 Fireplace</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasBalcony" checked={formData.hasBalcony} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">🏞️ Balcony/Terrace</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-purple-300">
+                    <input type="checkbox" name="hasGarage" checked={formData.hasGarage} onChange={handleChange} className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm">🚗 Enclosed Garage</span>
+                  </label>
+                </div>
+                
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">🌄 View Type</label>
+                  <select name="viewType" value={formData.viewType} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg bg-white">
+                    <option value="None">No special view</option>
+                    <option value="Lake">Lake View (+25%)</option>
+                    <option value="Mountain">Mountain View (+20%)</option>
+                    <option value="City">City View (+15%)</option>
+                    <option value="Valley">Valley View (+10%)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Lake or Mountain views can increase property value significantly</p>
                 </div>
               </div>
 
@@ -735,6 +934,12 @@ export default function FieldDataPage() {
                         <p className="text-xs text-white/70 mt-1">AI Estimated Value</p>
                       </div>
                       
+                      {premiumCount > 0 && (
+                        <div className="mb-3 p-2 bg-white/10 rounded-lg text-center">
+                          <p className="text-xs text-yellow-300">✨ {premiumCount} premium features selected</p>
+                        </div>
+                      )}
+                      
                       <div className="space-y-3">
                         <div>
                           <div className="flex justify-between text-xs text-white/80 mb-1">
@@ -757,6 +962,24 @@ export default function FieldDataPage() {
                               <span>Building Value:</span>
                               <span>{liveValuation.breakdown?.buildingValue?.toLocaleString() || 0} RWF</span>
                             </div>
+                            {liveValuation.breakdown?.parkingValue > 0 && (
+                              <div className="flex justify-between text-yellow-200">
+                                <span>Parking:</span>
+                                <span>+{liveValuation.breakdown.parkingValue?.toLocaleString()} RWF</span>
+                              </div>
+                            )}
+                            {liveValuation.breakdown?.premiumFeaturesValue > 0 && (
+                              <div className="flex justify-between text-yellow-200">
+                                <span>Premium:</span>
+                                <span>+{liveValuation.breakdown.premiumFeaturesValue?.toLocaleString()} RWF</span>
+                              </div>
+                            )}
+                            {liveValuation.breakdown?.viewPremiumValue > 0 && (
+                              <div className="flex justify-between text-yellow-200">
+                                <span>View Premium:</span>
+                                <span>+{liveValuation.breakdown.viewPremiumValue?.toLocaleString()} RWF</span>
+                              </div>
+                            )}
                             <div className="flex justify-between pt-1 border-t border-white/20 mt-1">
                               <span className="font-semibold">Total:</span>
                               <span className="font-semibold">{liveValuation.estimatedValue?.toLocaleString()} RWF</span>
@@ -776,7 +999,7 @@ export default function FieldDataPage() {
               </div>
               
               <div className="mt-4 bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <p className="text-xs text-blue-800">💡 Tip: The valuation updates automatically as you enter data. Add land size and building size to start the calculation.</p>
+                <p className="text-xs text-blue-800">💡 Tip: Check premium features like Swimming Pool, Gym, Solar Panels to increase property value! Lake or Mountain views add up to 25% bonus.</p>
               </div>
             </div>
           </div>
