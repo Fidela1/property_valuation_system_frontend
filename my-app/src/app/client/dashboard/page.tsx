@@ -207,6 +207,7 @@ export default function ClientDashboard() {
 
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, href: '/client/dashboard', current: true },
+    { name: 'Access Requests', icon: Bell, href: '/client/access-requests', current: false },
     { name: 'Settings', icon: Settings, href: '/clientDashboard/settings', current: false },
     { name: 'Help & Support', icon: HelpCircle, href: '/clientDashboard/support', current: false },
   ];

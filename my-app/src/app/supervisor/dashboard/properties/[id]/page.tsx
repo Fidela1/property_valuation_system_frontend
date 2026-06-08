@@ -35,7 +35,20 @@ import {
   Car,
   TreePine,
   Zap,
-  Droplets
+  Droplets,
+  Wifi,
+  Sun,
+  Battery,
+  Shield,
+  Heart,
+  Sparkles,
+  Flame,
+  Wind,
+  Warehouse,
+  Users,
+  DoorOpen,
+  Layers,
+  ClipboardList
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -76,6 +89,24 @@ interface Property {
     hasFence?: boolean; fenceType?: string; fenceHeight?: number;
     nearestSchoolKm?: number; nearestHospitalKm?: number; nearestTransportKm?: number; nearestMarketKm?: number; roadAccessType?: string;
     hasElectricity?: boolean; hasWaterSupply?: boolean; hasWaterTank?: boolean;
+    // Premium features
+    hasSwimmingPool?: boolean;
+    hasGym?: boolean;
+    hasSmartHome?: boolean;
+    hasSolarPanels?: boolean;
+    hasBackupGenerator?: boolean;
+    hasSecuritySystem?: boolean;
+    hasLandscapedGarden?: boolean;
+    hasModernKitchen?: boolean;
+    hasAirConditioning?: boolean;
+    hasFireplace?: boolean;
+    hasBalcony?: boolean;
+    hasGarage?: boolean;
+    hasStaffQuarters?: boolean;
+    hasStorageRoom?: boolean;
+    hasWaterHeater?: boolean;
+    hasIntercom?: boolean;
+    viewType?: string;
   };
   images?: Array<{ id: string; url: string; isFeatured: boolean; order: number }>;
 }
@@ -97,45 +128,57 @@ export default function PropertyReviewPage() {
   const [dataCollectors, setDataCollectors] = useState<any[]>([]);
 
   useEffect(() => {
-  if (!params?.id) return;
+    if (!params?.id) return;
 
-  const token = localStorage.getItem('token');
-
-  if (!token) {
-    router.push('/login');
-    return;
-  }
-
-  fetchProperty();
-  fetchDataCollectors();
-}, [params]);
-
-  const fetchProperty = async () => {
-  if (!params?.id) return;
-
-  try {
     const token = localStorage.getItem('token');
 
-    const response = await api.get(
-      `/supervisor/dashboard/properties/${String(params.id)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (response.data.success) {
-      setProperty(response.data.data);
-    } else {
-      setError(response.data.error || 'Property not found');
+    if (!token) {
+      router.push('/login');
+      return;
     }
-  } catch (err: any) {
-    setError(err.response?.data?.error || 'Failed to load property');
-  } finally {
-    setLoading(false);
-  }
-};
+
+    fetchProperty();
+    fetchDataCollectors();
+  }, [params]);
+
+  const fetchProperty = async () => {
+    if (!params?.id) return;
+
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await api.get(
+        `/supervisor/dashboard/properties/${String(params.id)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const propertyData = response.data.data;
+        
+        // Debug: Log what premium features came from backend
+        console.log('=== PREMIUM FEATURES DEBUG ===');
+        console.log('Field data:', propertyData.fieldData);
+        console.log('Has Swimming Pool:', propertyData.fieldData?.hasSwimmingPool);
+        console.log('Has Gym:', propertyData.fieldData?.hasGym);
+        console.log('Has Smart Home:', propertyData.fieldData?.hasSmartHome);
+        console.log('Has Solar Panels:', propertyData.fieldData?.hasSolarPanels);
+        console.log('View Type:', propertyData.fieldData?.viewType);
+        console.log('===============================');
+        
+        setProperty(propertyData);
+      } else {
+        setError(response.data.error || 'Property not found');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to load property');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchDataCollectors = async () => {
     try {
@@ -145,34 +188,34 @@ export default function PropertyReviewPage() {
     } catch (err) { console.error('Error fetching collectors:', err); }
   };
 
- const handleAssign = async () => {
-  if (!selectedCollector) { 
-    alert('Please select a data collector'); 
-    return; 
-  }
-  
-  setActionLoading(true);
-  try {
-    const token = localStorage.getItem('token');
-    const response = await api.post(
-      `/supervisor/dashboard/properties/${params.id}/assign`,
-      { collectorEmail: selectedCollector }, 
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    
-    if (response.data.success) {
-      alert('Data collector assigned successfully!');
-      setShowAssignModal(false);
-      fetchProperty();
-    } else {
-      alert(response.data.error || 'Failed to assign');
+  const handleAssign = async () => {
+    if (!selectedCollector) { 
+      alert('Please select a data collector'); 
+      return; 
     }
-  } catch (err: any) { 
-    alert(err.response?.data?.error || 'Error assigning collector'); 
-  } finally { 
-    setActionLoading(false); 
-  }
-};
+    
+    setActionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.post(
+        `/supervisor/dashboard/properties/${params.id}/assign`,
+        { collectorEmail: selectedCollector }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        alert('Data collector assigned successfully!');
+        setShowAssignModal(false);
+        fetchProperty();
+      } else {
+        alert(response.data.error || 'Failed to assign');
+      }
+    } catch (err: any) { 
+      alert(err.response?.data?.error || 'Error assigning collector'); 
+    } finally { 
+      setActionLoading(false); 
+    }
+  };
 
   const handleApprove = async () => {
     setActionLoading(true);
@@ -185,42 +228,31 @@ export default function PropertyReviewPage() {
     finally { setActionLoading(false); }
   };
 
- const handleReject = async () => {
-  if (!rejectionReason) { 
-    alert('Please provide a reason for rejection'); 
-    return; 
-  }
-  setActionLoading(true);
-  try {
-    const token = localStorage.getItem('token');
-    const response = await api.post(
-      `/supervisor/dashboard/properties/${params.id}/reject`, 
-      { comment: rejectionReason },  // ✅ Change from "reason" to "comment"
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (response.data.success) { 
-      alert('Property rejected successfully!'); 
-      setShowRejectModal(false); 
-      fetchProperty(); 
-    } else {
-      alert(response.data.error || 'Failed to reject');
+  const handleReject = async () => {
+    if (!rejectionReason) { 
+      alert('Please provide a reason for rejection'); 
+      return; 
     }
-  } catch (err: any) { 
-    alert(err.response?.data?.error || 'Error rejecting property'); 
-  } finally { 
-    setActionLoading(false); 
-  }
-};
-
-  const handlePublish = async () => {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await api.post(`/supervisor/dashboard/properties/${params.id}/publish`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      if (response.data.success) { alert('Property published successfully!'); fetchProperty(); }
-      else alert(response.data.error || 'Failed to publish');
-    } catch (err: any) { alert(err.response?.data?.error || 'Error publishing property'); }
-    finally { setActionLoading(false); }
+      const response = await api.post(
+        `/supervisor/dashboard/properties/${params.id}/reject`, 
+        { comment: rejectionReason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.data.success) { 
+        alert('Property rejected successfully!'); 
+        setShowRejectModal(false); 
+        fetchProperty(); 
+      } else {
+        alert(response.data.error || 'Failed to reject');
+      }
+    } catch (err: any) { 
+      alert(err.response?.data?.error || 'Error rejecting property'); 
+    } finally { 
+      setActionLoading(false); 
+    }
   };
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('rw-RW', { style: 'currency', currency: 'RWF', minimumFractionDigits: 0 }).format(amount || 0);
@@ -232,6 +264,41 @@ export default function PropertyReviewPage() {
     };
     return badges[status] || 'bg-gray-100 text-gray-800';
   };
+
+  // Count premium features - Fixed to check actual boolean values
+  const getPremiumFeaturesCount = () => {
+    if (!property?.fieldData) return 0;
+    const fd = property.fieldData;
+    let count = 0;
+    if (fd.hasSwimmingPool === true) count++;
+    if (fd.hasGym === true) count++;
+    if (fd.hasSmartHome === true) count++;
+    if (fd.hasSolarPanels === true) count++;
+    if (fd.hasBackupGenerator === true) count++;
+    if (fd.hasSecuritySystem === true) count++;
+    if (fd.hasLandscapedGarden === true) count++;
+    if (fd.hasModernKitchen === true) count++;
+    if (fd.hasAirConditioning === true) count++;
+    if (fd.hasFireplace === true) count++;
+    if (fd.hasBalcony === true) count++;
+    if (fd.hasGarage === true) count++;
+    if (fd.hasStaffQuarters === true) count++;
+    if (fd.hasStorageRoom === true) count++;
+    if (fd.hasWaterHeater === true) count++;
+    if (fd.hasIntercom === true) count++;
+    return count;
+  };
+
+  const premiumCount = getPremiumFeaturesCount();
+  
+  // Check if any premium feature exists (for debugging)
+  const hasAnyPremium = property?.fieldData && (
+    property.fieldData.hasSwimmingPool === true ||
+    property.fieldData.hasGym === true ||
+    property.fieldData.hasSmartHome === true ||
+    property.fieldData.hasSolarPanels === true ||
+    property.fieldData.viewType !== undefined
+  );
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-center"><div className="w-12 h-12 border-4 border-[#1B3A5C] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><p>Loading property details...</p></div></div>;
   if (error || !property) return <div className="min-h-screen flex items-center justify-center"><div className="text-center text-red-600">{error || 'Property not found'}</div></div>;
@@ -272,10 +339,10 @@ export default function PropertyReviewPage() {
               <img src={getFullImageUrl(property.images[currentImageIndex]?.url) || ''} alt="Property" className="w-full h-full object-contain" />
               {property.images.length > 1 && (
                 <>
-                  <button onClick={() => setCurrentImageIndex(prev => prev === 0 ? property.images!.length - 1 : prev - 1)} className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
+                  <button onClick={() => setCurrentImageIndex(prev => prev === 0 ? property.images!.length - 1 : prev - 1)} className="absolute left-4 top-1/2 transform translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <button onClick={() => setCurrentImageIndex(prev => prev === property.images!.length - 1 ? 0 : prev + 1)} className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
+                  <button onClick={() => setCurrentImageIndex(prev => prev === property.images!.length - 1 ? 0 : prev + 1)} className="absolute right-4 top-1/2 transform translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 </>
@@ -327,9 +394,17 @@ export default function PropertyReviewPage() {
             {property.fieldData && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-[#1B3A5C]" />
-                    <h2 className="font-semibold text-gray-900">Property Features</h2>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-[#1B3A5C]" />
+                      <h2 className="font-semibold text-gray-900">Property Features</h2>
+                    </div>
+                    {premiumCount > 0 && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 rounded-full">
+                        <Star className="w-3 h-3 text-purple-600" />
+                        <span className="text-xs font-medium text-purple-600">{premiumCount} Premium Features</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="p-5">
@@ -364,8 +439,82 @@ export default function PropertyReviewPage() {
                     </div>
                   </div>
 
+                  {/* Premium Features Section - FIXED: Now shows properly */}
+                  {(property.fieldData.hasSwimmingPool === true || property.fieldData.hasGym === true || property.fieldData.hasSmartHome === true || 
+                    property.fieldData.hasSolarPanels === true || property.fieldData.hasBackupGenerator === true || property.fieldData.hasSecuritySystem === true ||
+                    property.fieldData.hasLandscapedGarden === true || property.fieldData.hasModernKitchen === true || property.fieldData.hasAirConditioning === true ||
+                    property.fieldData.hasFireplace === true || property.fieldData.hasBalcony === true || property.fieldData.hasGarage === true ||
+                    property.fieldData.hasStaffQuarters === true || property.fieldData.hasStorageRoom === true || property.fieldData.hasWaterHeater === true ||
+                    property.fieldData.hasIntercom === true || (property.fieldData.viewType && property.fieldData.viewType !== 'None')) && (
+                    <div className="mb-4 pt-3 border-t border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-600" /> Premium Features & Amenities
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {property.fieldData.hasSwimmingPool === true && (
+                          <div className="flex items-center gap-2 text-sm"><Droplets className="w-4 h-4 text-blue-500" /><span>Swimming Pool</span></div>
+                        )}
+                        {property.fieldData.hasGym === true && (
+                          <div className="flex items-center gap-2 text-sm"><Heart className="w-4 h-4 text-red-500" /><span>Home Gym</span></div>
+                        )}
+                        {property.fieldData.hasSmartHome === true && (
+                          <div className="flex items-center gap-2 text-sm"><Wifi className="w-4 h-4 text-indigo-500" /><span>Smart Home</span></div>
+                        )}
+                        {property.fieldData.hasSolarPanels === true && (
+                          <div className="flex items-center gap-2 text-sm"><Sun className="w-4 h-4 text-yellow-500" /><span>Solar Panels</span></div>
+                        )}
+                        {property.fieldData.hasBackupGenerator === true && (
+                          <div className="flex items-center gap-2 text-sm"><Battery className="w-4 h-4 text-green-500" /><span>Backup Generator</span></div>
+                        )}
+                        {property.fieldData.hasSecuritySystem === true && (
+                          <div className="flex items-center gap-2 text-sm"><Shield className="w-4 h-4 text-gray-600" /><span>Security System</span></div>
+                        )}
+                        {property.fieldData.hasLandscapedGarden === true && (
+                          <div className="flex items-center gap-2 text-sm"><TreePine className="w-4 h-4 text-green-600" /><span>Landscaped Garden</span></div>
+                        )}
+                        {property.fieldData.hasModernKitchen === true && (
+                          <div className="flex items-center gap-2 text-sm"><Home className="w-4 h-4 text-orange-500" /><span>Modern Kitchen</span></div>
+                        )}
+                        {property.fieldData.hasAirConditioning === true && (
+                          <div className="flex items-center gap-2 text-sm"><Wind className="w-4 h-4 text-cyan-500" /><span>Air Conditioning</span></div>
+                        )}
+                        {property.fieldData.hasFireplace === true && (
+                          <div className="flex items-center gap-2 text-sm"><Flame className="w-4 h-4 text-orange-600" /><span>Fireplace</span></div>
+                        )}
+                        {property.fieldData.hasBalcony === true && (
+                          <div className="flex items-center gap-2 text-sm"><DoorOpen className="w-4 h-4 text-teal-500" /><span>Balcony/Terrace</span></div>
+                        )}
+                        {property.fieldData.hasGarage === true && (
+                          <div className="flex items-center gap-2 text-sm"><Car className="w-4 h-4 text-gray-600" /><span>Enclosed Garage</span></div>
+                        )}
+                        {property.fieldData.hasStaffQuarters === true && (
+                          <div className="flex items-center gap-2 text-sm"><Users className="w-4 h-4 text-purple-500" /><span>Staff Quarters</span></div>
+                        )}
+                        {property.fieldData.hasStorageRoom === true && (
+                          <div className="flex items-center gap-2 text-sm"><Warehouse className="w-4 h-4 text-gray-500" /><span>Storage Room</span></div>
+                        )}
+                        {property.fieldData.hasWaterHeater === true && (
+                          <div className="flex items-center gap-2 text-sm"><Droplets className="w-4 h-4 text-blue-400" /><span>Water Heater</span></div>
+                        )}
+                        {property.fieldData.hasIntercom === true && (
+                          <div className="flex items-center gap-2 text-sm"><Zap className="w-4 h-4 text-gray-500" /><span>Intercom System</span></div>
+                        )}
+                      </div>
+                      {property.fieldData.viewType && property.fieldData.viewType !== 'None' && (
+                        <div className="mt-3 pt-2 border-t border-gray-100">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Eye className="w-4 h-4 text-purple-500" />
+                            <span className="font-medium">View Type:</span>
+                            <span>{property.fieldData.viewType} View</span>
+                            <span className="text-xs text-green-600">(+ premium value)</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Garden Details */}
-                  {(property.fieldData.hasGarden !== undefined || property.fieldData.gardenSize || property.fieldData.gardenType) && (
+                  {(property.fieldData.hasGarden === true || property.fieldData.gardenSize || property.fieldData.gardenType) && (
                     <div className="mb-4 pt-3 border-t border-gray-200">
                       <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                         <TreePine className="w-4 h-4" /> Garden Details
@@ -385,7 +534,7 @@ export default function PropertyReviewPage() {
                   )}
 
                   {/* Annex Details */}
-                  {(property.fieldData.hasAnnex !== undefined || property.fieldData.annexType || property.fieldData.annexSize) && (
+                  {(property.fieldData.hasAnnex === true || property.fieldData.annexType || property.fieldData.annexSize) && (
                     <div className="mb-4 pt-3 border-t border-gray-200">
                       <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                         <Building2 className="w-4 h-4" /> Annex Details
@@ -411,10 +560,10 @@ export default function PropertyReviewPage() {
                   )}
 
                   {/* Gate & Fence Details */}
-                  {(property.fieldData.hasGate !== undefined || property.fieldData.hasFence !== undefined) && (
+                  {(property.fieldData.hasGate === true || property.fieldData.hasFence === true || property.fieldData.gateType || property.fieldData.fenceHeight) && (
                     <div className="mb-4 pt-3 border-t border-gray-200">
                       <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <Zap className="w-4 h-4" /> Boundary & Security
+                        <Shield className="w-4 h-4" /> Boundary & Security
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {property.fieldData.hasGate !== undefined && (
@@ -521,19 +670,48 @@ export default function PropertyReviewPage() {
 
           {/* Right Column - Valuation & Actions */}
           <div className="space-y-6">
-            {/* Valuation Card */}
-            <div className="bg-gradient-to-br from-[#1B3A5C] to-[#2C5F8A] rounded-xl shadow-lg overflow-hidden">
+            {/* Debug info - Remove after confirming */}
+            {hasAnyPremium && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs text-yellow-700">
+                Premium features detected! Count: {premiumCount}
+              </div>
+            )}
+            
+            {/* Collector's Valuation Card */}
+            <div className="bg-gradient-to-br from-green-600 to-teal-600 rounded-xl shadow-lg overflow-hidden">
               <div className="p-5">
-                <div className="flex items-center gap-2 mb-4"><TrendingUp className="w-5 h-5 text-white/80" /><h3 className="text-white/80 text-sm uppercase tracking-wide">AI Valuation</h3></div>
-                <p className="text-3xl font-bold text-white mb-2">{formatCurrency(property.aiValuation || 0)}</p>
-                {property.aiConfidence && (
-                  <div className="mt-3"><div className="flex justify-between text-xs text-white/80 mb-1"><span>Confidence Score</span><span>{property.aiConfidence}%</span></div><div className="w-full bg-white/20 rounded-full h-2"><div className="bg-white rounded-full h-2" style={{ width: `${property.aiConfidence}%` }} /></div></div>
-                )}
-                {property.fieldData?.valuationAmount && (
-                  <div className="mt-4 pt-3 border-t border-white/20"><p className="text-xs text-white/80 mb-1">Field Valuation</p><p className="text-xl font-semibold text-white">{formatCurrency(property.fieldData.valuationAmount)}</p></div>
-                )}
+                <div className="flex items-center gap-2 mb-4">
+                  <ClipboardList className="w-5 h-5 text-white/80" />
+                  <h3 className="text-white/80 text-sm uppercase tracking-wide">Collector's Valuation</h3>
+                </div>
+                <p className="text-3xl font-bold text-white mb-2">{formatCurrency(property.fieldData?.valuationAmount || 0)}</p>
+                <p className="text-xs text-white/70">Submitted by Data Collector</p>
               </div>
             </div>
+
+            {/* AI Reference Valuation */}
+            {property.aiValuation && property.aiValuation > 0 && (
+              <div className="bg-gradient-to-br from-gray-600 to-gray-700 rounded-xl shadow-lg overflow-hidden">
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-gray-300" />
+                    <h3 className="text-gray-300 text-xs uppercase tracking-wide">AI Reference</h3>
+                  </div>
+                  <p className="text-xl font-bold text-white mb-1">{formatCurrency(property.aiValuation)}</p>
+                  {property.aiConfidence && (
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs text-gray-300 mb-1">
+                        <span>Confidence</span>
+                        <span>{property.aiConfidence}%</span>
+                      </div>
+                      <div className="w-full bg-white/20 rounded-full h-1.5">
+                        <div className="bg-white rounded-full h-1.5" style={{ width: `${property.aiConfidence}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Assignment Info */}
             {property.assignment && (
@@ -583,17 +761,17 @@ export default function PropertyReviewPage() {
             <div className="p-6">
               <p className="text-sm text-gray-600 mb-4">Property: <strong>{property.ownerName} - {property.upiNumber}</strong></p>
               <select 
-  value={selectedCollector} 
-  onChange={(e) => setSelectedCollector(e.target.value)} 
-  className="w-full px-3 py-2 border rounded-lg mb-4"
->
-  <option value="">Select a collector...</option>
-  {dataCollectors.filter((c: any) => c.isActive !== false).map((collector: any) => (
-    <option key={collector.id} value={collector.email}>  {/* ✅ Use email as value */}
-      {collector.name} - {collector.email}
-    </option>
-  ))}
-</select>
+                value={selectedCollector} 
+                onChange={(e) => setSelectedCollector(e.target.value)} 
+                className="w-full px-3 py-2 border rounded-lg mb-4"
+              >
+                <option value="">Select a collector...</option>
+                {dataCollectors.filter((c: any) => c.isActive !== false).map((collector: any) => (
+                  <option key={collector.id} value={collector.email}>
+                    {collector.name} - {collector.email}
+                  </option>
+                ))}
+              </select>
               <div className="flex gap-3"><button onClick={() => setShowAssignModal(false)} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button><button onClick={handleAssign} disabled={actionLoading} className="flex-1 px-4 py-2 bg-[#1B3A5C] text-white rounded-lg">Assign</button></div>
             </div>
           </div>

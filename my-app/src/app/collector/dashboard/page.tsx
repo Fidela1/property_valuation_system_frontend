@@ -37,7 +37,8 @@ import {
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
   Building2,
-  Edit
+  Edit,
+  Loader2
 } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -71,6 +72,7 @@ interface Submission {
   submittedAt: string;
   status: string;
   valuationAmount?: number;
+  aiValuation?: number;
 }
 
 interface RevisionRequest {
@@ -83,6 +85,27 @@ interface RevisionRequest {
   comment: string;
   requestedAt: string;
   status: string;
+}
+
+interface LiveValuation {
+  estimatedValue: number;
+  confidenceScore: number;
+  breakdown: {
+    landValue: number;
+    buildingValue: number;
+    roomPremium: number;
+    gardenValue: number;
+    fenceValue: number;
+    gateValue: number;
+    parkingValue: number;
+    premiumFeaturesValue: number;
+    viewPremiumValue: number;
+    subtotal: number;
+  };
+  priceRange: {
+    min: number;
+    max: number;
+  };
 }
 
 const getFullImageUrl = (url: string) => {
@@ -112,6 +135,10 @@ export default function CollectorDashboard() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  
+  // AI Valuation state
+  const [liveValuation, setLiveValuation] = useState<LiveValuation | null>(null);
+  const [valuationLoading, setValuationLoading] = useState(false);
   
   // Field data form state
   const [fieldData, setFieldData] = useState({
@@ -145,7 +172,6 @@ export default function CollectorDashboard() {
     nearestTransportKm: '',
     nearestMarketKm: '',
     roadAccessType: '',
-    valuationAmount: '',
     notes: '',
   });
 
@@ -180,6 +206,107 @@ export default function CollectorDashboard() {
     
     fetchDashboardData();
   }, []);
+
+  // Calculate live valuation when form data changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (fieldData.landSize && fieldData.buildingSize && parseFloat(fieldData.landSize) > 0 && parseFloat(fieldData.buildingSize) > 0) {
+        calculateLiveValuation();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [
+    fieldData.landSize,
+    fieldData.buildingSize,
+    fieldData.bedrooms,
+    fieldData.bathrooms,
+    fieldData.yearBuilt,
+    fieldData.propertyType,
+    fieldData.condition,
+    fieldData.hasGarden,
+    fieldData.gardenSize,
+    fieldData.hasAnnex,
+    fieldData.annexSize,
+    fieldData.annexBedrooms,
+    fieldData.annexBathrooms,
+    fieldData.hasGate,
+    fieldData.gateType,
+    fieldData.hasFence,
+    fieldData.fenceHeight,
+    fieldData.parkingSpaces,
+    fieldData.nearestSchoolKm,
+    fieldData.nearestHospitalKm,
+    fieldData.nearestTransportKm,
+    fieldData.nearestMarketKm,
+    fieldData.roadAccessType
+  ]);
+
+  const calculateLiveValuation = async () => {
+    if (!fieldData.landSize || !fieldData.buildingSize) return;
+    
+    setValuationLoading(true);
+    try {
+      let propertyType = 'STANDARD';
+      const buildingSizeNum = parseFloat(fieldData.buildingSize) || 0;
+      const bedroomsNum = parseInt(fieldData.bedrooms) || 0;
+      
+      if (buildingSizeNum > 500 || bedroomsNum > 5 || fieldData.propertyType === 'VILLA') {
+        propertyType = 'LUXURY';
+      } else if (buildingSizeNum < 100 || bedroomsNum <= 2) {
+        propertyType = 'BASIC';
+      }
+      
+      let propertyCategory = 'RESIDENTIAL';
+      if (fieldData.propertyType === 'COMMERCIAL') propertyCategory = 'COMMERCIAL';
+      else if (fieldData.propertyType === 'LAND') propertyCategory = 'LAND';
+      
+      let floorMaterial = 'Cement';
+      if (fieldData.gardenType === 'Luxury') floorMaterial = 'Marble';
+      else if (fieldData.gardenType === 'Medium') floorMaterial = 'Tiles';
+      else if (fieldData.gardenType === 'Large') floorMaterial = 'Wood';
+      
+      let roofType = 'Iron sheets';
+      if (propertyType === 'LUXURY') roofType = 'Concrete';
+      else if (propertyType === 'STANDARD') roofType = 'Tiles';
+      
+      const payload = {
+        landSize: parseFloat(fieldData.landSize) || 0,
+        buildingSize: parseFloat(fieldData.buildingSize) || 0,
+        yearBuilt: parseInt(fieldData.yearBuilt) || 2000,
+        propertyType: propertyType,
+        propertyCategory: propertyCategory,
+        bedrooms: parseInt(fieldData.bedrooms) || 2,
+        bathrooms: parseFloat(fieldData.bathrooms) || 1,
+        gardenSize: parseFloat(fieldData.gardenSize) || 0,
+        fenceHeight: parseFloat(fieldData.fenceHeight) || 0,
+        gateType: fieldData.gateType ? fieldData.gateType.toUpperCase() : null,
+        parkingSpaces: parseInt(fieldData.parkingSpaces) || 0,
+        hasElectricity: true,
+        hasWaterSupply: true,
+        hasWaterTank: false,
+        floodRisk: false,
+        landSlope: "Flat",
+        floorMaterial: floorMaterial,
+        roofType: roofType,
+        district: selectedAssignment?.district || "Gasabo",
+        nearestSchoolKm: parseFloat(fieldData.nearestSchoolKm) || 2,
+        nearestHospitalKm: parseFloat(fieldData.nearestHospitalKm) || 3,
+        nearestTransportKm: parseFloat(fieldData.nearestTransportKm) || 1,
+        nearestMarketKm: parseFloat(fieldData.nearestMarketKm) || 1.5,
+        roadAccessType: fieldData.roadAccessType || "PAVED",
+      };
+      
+      const response = await api.post('/valuation/live', payload);
+      
+      if (response.data.success) {
+        setLiveValuation(response.data.data);
+      }
+    } catch (err) {
+      console.error('Live valuation error:', err);
+    } finally {
+      setValuationLoading(false);
+    }
+  };
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -228,7 +355,8 @@ export default function CollectorDashboard() {
           },
           submittedAt: item.submittedAt,
           status: item.property?.status,
-          valuationAmount: item.valuationAmount
+          valuationAmount: item.valuationAmount,
+          aiValuation: item.property?.aiValuation
         }));
         
         setSubmissions(Array.isArray(mappedSubmissions) ? mappedSubmissions : []);
@@ -327,7 +455,8 @@ export default function CollectorDashboard() {
       formData.append('nearestTransportKm', fieldData.nearestTransportKm || '0');
       formData.append('nearestMarketKm', fieldData.nearestMarketKm || '0');
       formData.append('roadAccessType', fieldData.roadAccessType);
-      formData.append('valuationAmount', fieldData.valuationAmount || '0');
+      // Use AI valuation instead of user input
+      formData.append('valuationAmount', liveValuation?.estimatedValue?.toString() || '0');
       formData.append('notes', fieldData.notes || '');
       
       uploadedImages.forEach((image) => {
@@ -351,8 +480,9 @@ export default function CollectorDashboard() {
           hasAnnex: false, annexType: '', annexSize: '', annexBedrooms: '', annexBathrooms: '',
           hasGate: false, gateType: '', gateMaterial: '', hasFence: false, fenceType: '',
           fenceHeight: '', nearestSchoolKm: '', nearestHospitalKm: '', nearestTransportKm: '',
-          nearestMarketKm: '', roadAccessType: '', valuationAmount: '', notes: ''
+          nearestMarketKm: '', roadAccessType: '', notes: ''
         });
+        setLiveValuation(null);
         setUploadedImages([]);
         setImagePreviews([]);
         fetchDashboardData();
@@ -489,7 +619,7 @@ export default function CollectorDashboard() {
         </header>
 
         <div className="p-6">
-          {/* Stats Cards with Colored Left Borders */}
+          {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-indigo-500 overflow-hidden">
               <div className="p-6">
@@ -647,7 +777,7 @@ export default function CollectorDashboard() {
                 </div>
               )}
 
-              {/* Submissions Tab with Edit Button */}
+              {/* Submissions Tab */}
               {activeTab === 'submissions' && submissions.length === 0 && (
                 <div className="text-center py-12">
                   <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -662,7 +792,7 @@ export default function CollectorDashboard() {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Property</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valuation</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI Valuation</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -672,6 +802,7 @@ export default function CollectorDashboard() {
                       {submissions.map((submission) => {
                         const submissionStatus = submission.status || submission.property?.status;
                         const isEditable = submissionStatus === 'UNDER_REVIEW' || submissionStatus === 'NEEDS_REVISION';
+                        const aiValue = submission.aiValuation || submission.valuationAmount;
                         
                         return (
                           <tr key={submission.id} className="hover:bg-gray-50">
@@ -683,7 +814,10 @@ export default function CollectorDashboard() {
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-600">{submission.property?.district}</td>
                             <td className="px-6 py-4">
-                              <span className="font-semibold text-indigo-600">{formatCurrency(submission.valuationAmount || 0)}</span>
+                              <div>
+                                <span className="font-semibold text-indigo-600">{formatCurrency(aiValue || 0)}</span>
+                                <p className="text-xs text-gray-400">AI Generated</p>
+                              </div>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-500">{formatDate(submission.submittedAt)}</td>
                             <td className="px-6 py-4">
@@ -761,7 +895,7 @@ export default function CollectorDashboard() {
         </div>
       </main>
 
-      {/* Field Data Collection Modal */}
+      {/* Field Data Collection Modal with AI Valuation */}
       {showFieldDataModal && selectedAssignment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
@@ -805,8 +939,8 @@ export default function CollectorDashboard() {
                     </select>
                     <input type="number" placeholder="Bedrooms" value={fieldData.bedrooms} onChange={(e) => setFieldData({...fieldData, bedrooms: e.target.value})} className="px-3 py-2 border rounded-lg" />
                     <input type="number" placeholder="Bathrooms" value={fieldData.bathrooms} onChange={(e) => setFieldData({...fieldData, bathrooms: e.target.value})} className="px-3 py-2 border rounded-lg" />
-                    <input type="number" placeholder="Land Size (m²)" value={fieldData.landSize} onChange={(e) => setFieldData({...fieldData, landSize: e.target.value})} className="px-3 py-2 border rounded-lg" />
-                    <input type="number" placeholder="Building Size (m²)" value={fieldData.buildingSize} onChange={(e) => setFieldData({...fieldData, buildingSize: e.target.value})} className="px-3 py-2 border rounded-lg" />
+                    <input type="number" placeholder="Land Size (m²) *" value={fieldData.landSize} onChange={(e) => setFieldData({...fieldData, landSize: e.target.value})} className="px-3 py-2 border rounded-lg" required />
+                    <input type="number" placeholder="Building Size (m²) *" value={fieldData.buildingSize} onChange={(e) => setFieldData({...fieldData, buildingSize: e.target.value})} className="px-3 py-2 border rounded-lg" required />
                     <input type="number" placeholder="Year Built" value={fieldData.yearBuilt} onChange={(e) => setFieldData({...fieldData, yearBuilt: e.target.value})} className="px-3 py-2 border rounded-lg" />
                     <input type="number" placeholder="Parking Spaces" value={fieldData.parkingSpaces} onChange={(e) => setFieldData({...fieldData, parkingSpaces: e.target.value})} className="px-3 py-2 border rounded-lg" />
                   </div>
@@ -889,15 +1023,65 @@ export default function CollectorDashboard() {
                   </div>
                 </div>
 
-                {/* Valuation */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" /> Valuation
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    <input type="number" placeholder="Estimated Valuation Amount (RWF)" value={fieldData.valuationAmount} onChange={(e) => setFieldData({...fieldData, valuationAmount: e.target.value})} className="px-3 py-2 border rounded-lg" />
-                    <textarea placeholder="Additional Notes" value={fieldData.notes} onChange={(e) => setFieldData({...fieldData, notes: e.target.value})} rows={3} className="px-3 py-2 border rounded-lg" />
+                {/* AI Valuation Display */}
+                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-white flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4" /> AI Generated Valuation
+                    </h3>
+                    {valuationLoading && <Loader2 className="w-4 h-4 text-white animate-spin" />}
                   </div>
+                  
+                  {liveValuation ? (
+                    <div>
+                      <p className="text-2xl font-bold text-white">{formatCurrency(liveValuation.estimatedValue)}</p>
+                      <p className="text-xs text-white/70">Confidence: {liveValuation.confidenceScore}%</p>
+                      {liveValuation.priceRange && (
+                        <p className="text-xs text-white/50 mt-1">
+                          Range: {formatCurrency(liveValuation.priceRange.min)} - {formatCurrency(liveValuation.priceRange.max)}
+                        </p>
+                      )}
+                      <div className="mt-2 pt-2 border-t border-white/20">
+                        <p className="text-xs text-white/70">Breakdown:</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-white/60 mt-1">
+                          <div className="flex justify-between">
+                            <span>Land:</span>
+                            <span>{formatCurrency(liveValuation.breakdown?.landValue || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Building:</span>
+                            <span>{formatCurrency(liveValuation.breakdown?.buildingValue || 0)}</span>
+                          </div>
+                          {liveValuation.breakdown?.gardenValue > 0 && (
+                            <div className="flex justify-between">
+                              <span>Garden:</span>
+                              <span className="text-green-300">+{formatCurrency(liveValuation.breakdown.gardenValue)}</span>
+                            </div>
+                          )}
+                          {liveValuation.breakdown?.parkingValue > 0 && (
+                            <div className="flex justify-between">
+                              <span>Parking:</span>
+                              <span className="text-green-300">+{formatCurrency(liveValuation.breakdown.parkingValue)}</span>
+                            </div>
+                          )}
+                          {liveValuation.breakdown?.premiumFeaturesValue > 0 && (
+                            <div className="flex justify-between">
+                              <span>Premium:</span>
+                              <span className="text-yellow-300">+{formatCurrency(liveValuation.breakdown.premiumFeaturesValue)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-white/70 text-sm">Enter land size and building size to get AI valuation</p>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-900 mb-3">Additional Notes</h3>
+                  <textarea placeholder="Additional notes" value={fieldData.notes} onChange={(e) => setFieldData({...fieldData, notes: e.target.value})} rows={3} className="w-full px-3 py-2 border rounded-lg" />
                 </div>
 
                 {/* Images */}
@@ -925,8 +1109,18 @@ export default function CollectorDashboard() {
                   <button type="button" onClick={() => setShowFieldDataModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                     Cancel
                   </button>
-                  <button type="submit" disabled={submitting} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
-                    {submitting ? 'Submitting...' : 'Submit Field Data'}
+                  <button 
+                    type="submit" 
+                    disabled={submitting || !liveValuation || !fieldData.landSize || !fieldData.buildingSize} 
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? (
+                      <><Loader2 className="w-4 h-4 animate-spin inline mr-2" /> Submitting...</>
+                    ) : !liveValuation ? (
+                      'Enter land & building size first'
+                    ) : (
+                      `Submit with AI Valuation (${formatCurrency(liveValuation.estimatedValue)})`
+                    )}
                   </button>
                 </div>
               </form>

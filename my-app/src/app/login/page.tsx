@@ -66,6 +66,10 @@ export default function LoginPage() {
           case 'SUPERVISOR':
             router.push('/supervisor/dashboard');
             break;
+          case 'FINACIAL_INSTITUTION':
+            router.push('/bank/dashboard');
+            break;
+            
           default:
             router.push('/client/dashboard');
         }

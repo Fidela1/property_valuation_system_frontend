@@ -23,6 +23,7 @@ export default function CreateInvitationPage() {
     { value: 'DATA_COLLECTOR', label: 'Data Collector', description: 'Visits properties and collects data' },
     { value: 'SUPERVISOR', label: 'Supervisor', description: 'Reviews and approves valuations' },
     { value: 'ADMIN', label: 'Administrator', description: 'Full system access' },
+    { value: 'FINACIAL_INSTITUTION', label: 'Financial Institution', description: 'Track property progress' },
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
