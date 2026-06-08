@@ -164,6 +164,12 @@ export default function BankDashboard() {
     );
   }
 
+  // Safely access counts with default values
+  const totalProperties = stats?.counts?.totalProperties ?? 0;
+  const pendingApproval = stats?.counts?.pendingApproval ?? 0;
+  const completed = stats?.counts?.completed ?? 0;
+  const averageValue = stats?.counts?.averageValue ?? 0;
+
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
@@ -180,7 +186,7 @@ export default function BankDashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Total Properties */}
         <div className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
@@ -189,14 +195,14 @@ export default function BankDashboard() {
               <div className="p-3 bg-blue-50 rounded-xl group-hover:scale-110 transition-transform duration-300">
                 <Building2 className="w-6 h-6 text-blue-600" />
               </div>
-              <span className="text-3xl font-bold text-gray-900">{stats?.counts.totalProperties || 0}</span>
+              <span className="text-3xl font-bold text-gray-900">{totalProperties}</span>
             </div>
             <h3 className="text-gray-600 font-semibold">Total Properties</h3>
             <p className="text-sm text-gray-400 mt-1">Properties you can access</p>
             <div className="mt-4 pt-4 border-t border-gray-100">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-500">Accessible properties</span>
-                <span className="text-blue-600 font-medium">+{stats?.counts.totalProperties || 0} total</span>
+                <span className="text-blue-600 font-medium">+{totalProperties} total</span>
               </div>
             </div>
           </div>
@@ -209,14 +215,14 @@ export default function BankDashboard() {
               <div className="p-3 bg-orange-50 rounded-xl group-hover:scale-110 transition-transform duration-300">
                 <Clock className="w-6 h-6 text-orange-600" />
               </div>
-              <span className="text-3xl font-bold text-gray-900">{stats?.counts.pendingApproval || 0}</span>
+              <span className="text-3xl font-bold text-gray-900">{pendingApproval}</span>
             </div>
             <h3 className="text-gray-600 font-semibold">Pending Approval</h3>
             <p className="text-sm text-gray-400 mt-1">Awaiting supervisor review</p>
             <div className="mt-4 pt-4 border-t border-gray-100">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-500">Under review</span>
-                {stats?.counts.pendingApproval > 0 && (
+                {pendingApproval > 0 && (
                   <Link href="/financial_institution/properties?status=UNDER_REVIEW" className="text-orange-600 hover:underline">
                     View all →
                   </Link>
@@ -233,14 +239,14 @@ export default function BankDashboard() {
               <div className="p-3 bg-green-50 rounded-xl group-hover:scale-110 transition-transform duration-300">
                 <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
-              <span className="text-3xl font-bold text-gray-900">{stats?.counts.completed || 0}</span>
+              <span className="text-3xl font-bold text-gray-900">{completed}</span>
             </div>
             <h3 className="text-gray-600 font-semibold">Completed</h3>
             <p className="text-sm text-gray-400 mt-1">Approved & published</p>
             <div className="mt-4 pt-4 border-t border-gray-100">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-500">Successfully valued</span>
-                <span className="text-green-600 font-medium">+{stats?.counts.completed || 0} total</span>
+                <span className="text-green-600 font-medium">+{completed} total</span>
               </div>
             </div>
           </div>
@@ -440,7 +446,7 @@ export default function BankDashboard() {
                     </td>
                     <td className="px-6 py-4">
                       <Link
-                        href={`/bank/properties/${property.id}/tracking`}
+                        href={`/financial_institution/properties/${property.id}/tracking`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#1B3A5C] hover:text-[#2C5F8A] transition-colors"
                       >
                         <Eye className="w-4 h-4" />

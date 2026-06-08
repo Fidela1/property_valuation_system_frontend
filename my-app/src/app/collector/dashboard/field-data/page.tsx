@@ -501,7 +501,7 @@ export default function FieldDataPage() {
       });
       
       if (response.data.success) {
-        aleart('Field data submitted successfully!');
+        alert('Field data submitted successfully!');
         router.push('/collector/dashboard');
       } else {
         alert(response.data.error || 'Failed to submit field data');
