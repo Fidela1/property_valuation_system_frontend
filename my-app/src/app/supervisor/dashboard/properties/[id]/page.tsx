@@ -146,6 +146,18 @@ export default function PropertyReviewPage() {
 
     try {
       const token = localStorage.getItem('token');
+      const propertyId = Array.isArray(params.id) ? params.id[0] : params.id;
+      
+        console.log('========== FETCH PROPERTY DEBUG ==========');
+    console.log('1. Property ID from params:', propertyId);
+    console.log('2. Type of property ID:', typeof propertyId);
+    console.log('3. Token exists:', !!token);
+    console.log('4. Token preview:', token ? `${token.substring(0, 20)}...` : 'No token');
+    console.log('5. API Base URL from env:', process.env.NEXT_PUBLIC_BACKEND_URL);
+    
+    const fullUrl = `/supervisor/dashboard/properties/${propertyId}`;
+    console.log('6. Full API URL being called:', fullUrl);
+    console.log('==========================================');
 
       const response = await api.get(
         `/supervisor/dashboard/properties/${String(params.id)}`,
