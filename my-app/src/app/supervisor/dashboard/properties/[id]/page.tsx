@@ -141,56 +141,32 @@ export default function PropertyReviewPage() {
     fetchDataCollectors();
   }, [params]);
 
-  const fetchProperty = async () => {
-    if (!params?.id) return;
+const fetchProperty = async () => {
+  if (!params?.id) return;
 
-    try {
-      const token = localStorage.getItem('token');
-      const propertyId = Array.isArray(params.id) ? params.id[0] : params.id;
-      
-        console.log('========== FETCH PROPERTY DEBUG ==========');
-    console.log('1. Property ID from params:', propertyId);
-    console.log('2. Type of property ID:', typeof propertyId);
-    console.log('3. Token exists:', !!token);
-    console.log('4. Token preview:', token ? `${token.substring(0, 20)}...` : 'No token');
-    console.log('5. API Base URL from env:', process.env.NEXT_PUBLIC_BACKEND_URL);
+  try {
+    const token = localStorage.getItem('token');
+    const propertyId = Array.isArray(params.id) ? params.id[0] : params.id;
     
-    const fullUrl = `/supervisor/dashboard/properties/${propertyId}`;
-    console.log('6. Full API URL being called:', fullUrl);
-    console.log('==========================================');
+    console.log('Fetching property ID:', propertyId);
+    
+    // Make sure this URL matches what worked in Postman
+    const response = await api.get(`/supervisor/dashboard/properties/${propertyId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
 
-      const response = await api.get(
-        `/supervisor/dashboard/properties/${String(params.id)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+    console.log('API Response:', response.data);
 
-      if (response.data.success) {
-        const propertyData = response.data.data;
-        
-        // Debug: Log what premium features came from backend
-        console.log('=== PREMIUM FEATURES DEBUG ===');
-        console.log('Field data:', propertyData.fieldData);
-        console.log('Has Swimming Pool:', propertyData.fieldData?.hasSwimmingPool);
-        console.log('Has Gym:', propertyData.fieldData?.hasGym);
-        console.log('Has Smart Home:', propertyData.fieldData?.hasSmartHome);
-        console.log('Has Solar Panels:', propertyData.fieldData?.hasSolarPanels);
-        console.log('View Type:', propertyData.fieldData?.viewType);
-        console.log('===============================');
-        
-        setProperty(propertyData);
-      } else {
-        setError(response.data.error || 'Property not found');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load property');
-    } finally {
-      setLoading(false);
+    if (response.data.success) {
+      setProperty(response.data.data);
+    } else {
+      setError(response.data.error || 'Property not found');
     }
-  };
+  } catch (err: any) {
+    console.error('Fetch error:', err);
+    setError(err.response?.data?.error || 'Failed to load property');
+  }
+};
 
   const fetchDataCollectors = async () => {
     try {
